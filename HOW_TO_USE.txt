@@ -1,0 +1,108 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  BTC.KILLER — Kalshi BTC 15M Trading Bot
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FIRST TIME SETUP (do this once)
+────────────────────────────────────────────────────────────
+1. Double-click:  1_SETUP.command
+
+   If macOS says it can't be opened:
+   → Right-click the file → Open → click "Open" in the dialog
+
+   The Setup Wizard will:
+   • Check you have Python 3.9+
+   • Install all required packages automatically
+   • Ask for your API keys
+   • Test the connection to Kalshi
+   • Configure everything
+
+   You'll need:
+   • Kalshi API Key ID  (kalshi.com → Profile → API Keys)
+   • Kalshi Private Key (.pem file — download from Kalshi)
+   • Coinalyze API Key  (free at coinalyze.net → API Keys)
+
+   Optional:
+   • Telegram Bot Token (from @BotFather on Telegram)
+   • Your Telegram User ID (for the allowlist)
+
+
+LAUNCHING THE DASHBOARD (every time after setup)
+────────────────────────────────────────────────────────────
+2. Double-click:  2_START_DASHBOARD.command
+
+   This opens the dashboard at http://localhost:5050
+   Your browser opens automatically.
+
+   From the dashboard you can:
+   • Click "▶ Start Bot" to begin trading
+   • Adjust mode, bet sizes, loss limits
+   • Watch live BTC price and signals
+   • Monitor P&L and win rate (pulled from Kalshi)
+   • Abort positions with one click
+
+
+TRADING MODES
+────────────────────────────────────────────────────────────
+Smart Mode (recommended):
+   Signal-driven. Waits for the second half of the market
+   (< 7.5 minutes remaining) before even considering a trade.
+   Only fires when signals agree AND price is reasonable.
+
+   Time-based price limits — bot will WAIT if price is too high:
+     10+ min left:  only buys if price < 30¢
+     7-10 min left: only buys if price < 45¢
+     5-7 min left:  only buys if price < 60¢
+     3-5 min left:  only buys if price < 75¢
+     1-3 min left:  only buys if price < 88¢
+     < 1 min left:  only buys if price < 95¢
+
+   The "WATCHING" state means: bot has conviction but is waiting
+   for price to drop into the acceptable range. It checks every
+   2 seconds and fires automatically when price drops in.
+
+Always Buy Mode:
+   Forces a trade at your set trigger time regardless of signals.
+
+
+TELEGRAM BOT
+────────────────────────────────────────────────────────────
+After setup, your Telegram bot responds to:
+
+  /start    — Main menu with buttons
+  /status   — Bot status, market, conviction
+  /position — Current open position
+  /pnl      — P&L and win rate from Kalshi
+  /market   — Current market info
+  /startbot — Start the trading bot
+  /stopbot  — Stop the trading bot
+  /abort    — Sell current position
+  /mode     — Change trading mode
+  /settings — View current settings
+  /help     — All commands
+
+
+FILES IN THIS FOLDER
+────────────────────────────────────────────────────────────
+1_SETUP.command          ← Run first (setup wizard)
+2_START_DASHBOARD.command ← Run to launch dashboard
+setup.py                 ← Setup wizard code (no private keys)
+bot.py                   ← Trading bot engine
+dashboard.py             ← Web dashboard server
+dashboard.html           ← Dashboard UI
+signals.py               ← BTC signal analysis
+telegram_bot.py          ← Telegram bot (optional)
+bot_config.json          ← Settings (saved by dashboard)
+requirements.txt         ← Python packages needed
+.env                     ← Your API keys (created by setup)
+trades/                  ← Trade history CSV files
+
+
+IMPORTANT NOTES
+────────────────────────────────────────────────────────────
+• This bot trades real money. Use appropriate bet sizes.
+• Set a daily loss limit you're comfortable with.
+• The bot only makes one trade per 15-minute market.
+• P&L and win rate are fetched directly from Kalshi.
+• Keep the dashboard terminal window open while trading.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
