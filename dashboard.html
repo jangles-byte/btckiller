@@ -1,0 +1,2959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRYPTO.KILLER Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #060a0e; --bg2: #0a1018; --bg3: #0f1820;
+    --border: #1a2a36; --accent: #00ff88; --accent2: #00c8ff;
+    --red: #ff3b5c; --yellow: #ffc837; --text: #d8eaf2;
+    --muted: #4a6272; --card: #0c1520; --orange: #ff8c42;
+    --radius: 8px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Space Mono',monospace; font-size:13px;
+    height:100vh; overflow:hidden; display:flex; flex-direction:column;
+  }
+
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.012) 2px,rgba(0,255,136,.012) 4px);
+    pointer-events:none; z-index:1000;
+  }
+
+  /* ── TAB NAV ─────────────────────────────── */
+  .tab-nav {
+    display:flex; align-items:center; gap:2px;
+    background:var(--bg2); border-bottom:1px solid var(--border);
+    padding:6px 10px 0; flex-shrink:0;
+  }
+  .tab-btn {
+    display:flex; align-items:center; gap:6px;
+    padding:7px 14px; font-family:'Syne',sans-serif; font-size:12px; font-weight:600;
+    letter-spacing:.06em; color:var(--muted); background:transparent;
+    border:1px solid transparent; border-bottom:none;
+    border-radius:var(--radius) var(--radius) 0 0;
+    cursor:pointer; transition:color .15s,background .15s; position:relative; top:1px;
+  }
+  .tab-btn:hover { color:var(--text); background:var(--bg3); }
+  .tab-btn.active { color:var(--accent); background:var(--bg); border-color:var(--border); border-bottom-color:var(--bg); }
+  .tab-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); transition:background .2s; }
+  .tab-btn.running .tab-dot { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+
+  /* ── TAB CONTENT ─────────────────────────── */
+  .tab-content { display:none; flex:1; overflow:hidden; }
+  .tab-content.active { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+
+  /* ── HOME TAB ────────────────────────────── */
+  .home-wrap { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
+
+  .home-header { display:flex; align-items:center; justify-content:space-between; }
+  .home-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--accent); letter-spacing:.08em; }
+  .home-subtitle { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .home-stats { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+  .home-stat-card {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px;
+  }
+  .home-stat-label { font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+  .home-stat-value { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--text); }
+  .home-stat-value.green { color:var(--accent); }
+  .home-stat-value.red { color:var(--red); }
+
+  .section-label { font-family:'Syne',sans-serif; font-size:11px; font-weight:600; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+
+  /* coin grid */
+  .coin-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
+  .coin-card {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px; display:flex; flex-direction:column; gap:8px; transition:border-color .2s;
+  }
+  .coin-card.running { border-color:rgba(0,255,136,.3); }
+  .coin-card-top { display:flex; align-items:center; justify-content:space-between; }
+  .coin-card-name { font-family:'Syne',sans-serif; font-size:14px; font-weight:800; }
+  .coin-card-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); }
+  .coin-card.running .coin-card-dot { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+  .coin-card-price { font-size:11px; color:var(--accent2); }
+  .coin-card-pnl { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+  .coin-card-stats { font-size:10px; color:var(--muted); line-height:1.6; }
+  .coin-card-btns { display:flex; gap:6px; margin-top:2px; }
+  .coin-card-btn {
+    flex:1; padding:5px 0; font-family:'Space Mono',monospace; font-size:10px; font-weight:700;
+    letter-spacing:.05em; border:none; border-radius:calc(var(--radius) - 2px); cursor:pointer; transition:opacity .15s;
+  }
+  .coin-card-btn.start { background:var(--accent); color:#000; }
+  .coin-card-btn.stop  { background:var(--red); color:#fff; }
+  .coin-card-btn.goto  { background:var(--bg3); color:var(--muted); border:1px solid var(--border); }
+  .coin-card-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .coin-card-pos { font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.03em; }
+
+  /* analytics row */
+  .analytics-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start; }
+  .analytics-chart-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+  #home-wr-chart { width:100%; height:115px; display:block; }
+  #home-sess-clock { display:block; }
+
+  /* home control sections */
+  .home-controls { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+
+  /* ── LIVE TICKER ──────────────────────────── */
+  .live-ticker {
+    height:28px; flex-shrink:0; background:rgba(10,16,24,.95); border-bottom:1px solid var(--border);
+    overflow:hidden; position:relative; display:flex; align-items:center;
+  }
+  .live-ticker::before {
+    content:''; position:absolute; left:0; top:0; width:50px; height:100%;
+    background:linear-gradient(90deg,rgba(10,16,24,1),transparent); z-index:2; pointer-events:none;
+  }
+  .live-ticker::after {
+    content:''; position:absolute; right:0; top:0; width:50px; height:100%;
+    background:linear-gradient(-90deg,rgba(10,16,24,1),transparent); z-index:2; pointer-events:none;
+  }
+  .ticker-track {
+    display:flex; align-items:center; white-space:nowrap;
+    animation:tickerScroll 55s linear infinite;
+  }
+  .ticker-track:hover { animation-play-state:paused; }
+  @keyframes tickerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  .ticker-item {
+    display:inline-flex; align-items:center; gap:7px;
+    padding:0 14px; font-family:'Space Mono',monospace; font-size:10px;
+    border-right:1px solid rgba(26,42,54,.5); height:28px;
+  }
+  .t-coin { font-family:'Syne',sans-serif; font-weight:700; font-size:10px; color:var(--muted); letter-spacing:.04em; }
+  .t-price { color:var(--accent2); }
+  .t-running { color:var(--accent); font-size:9px; }
+  .t-flat    { color:var(--muted); font-size:9px; }
+  .t-pnl-pos { color:var(--accent); font-size:9px; }
+  .t-pnl-neg { color:var(--red); font-size:9px; }
+  .t-event-win  { color:var(--accent); }
+  .t-event-loss { color:var(--red); }
+  .t-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .t-dot.on  { background:var(--accent); box-shadow:0 0 5px var(--accent); }
+  .t-dot.off { background:var(--muted); }
+  .home-ctrl-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+
+  /* hard stop accent */
+  .home-ctrl-card.danger { border-color:rgba(255,59,92,.25); }
+  .home-ctrl-card.tg { border-color:rgba(0,200,255,.2); }
+
+  .ctrl-card-title { font-size:10px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; font-weight:700; }
+  .ctrl-card-title.red { color:var(--red); }
+  .ctrl-card-title.blue { color:var(--accent2); }
+
+  .hc-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .hc-label { font-size:11px; color:var(--muted); white-space:nowrap; }
+
+  .home-input {
+    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius);
+    color:var(--text); font-family:'Space Mono',monospace; font-size:12px;
+    padding:5px 8px; outline:none; transition:border-color .15s;
+  }
+  .home-input:focus { border-color:var(--accent2); }
+  .home-input.sm { width:80px; }
+  .home-input.md { width:140px; }
+  .home-input.lg { flex:1; min-width:160px; }
+
+  .btn-sm {
+    padding:5px 12px; font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
+    border:none; border-radius:var(--radius); cursor:pointer; white-space:nowrap;
+    transition:filter .1s, transform .1s, opacity .1s;
+    user-select:none;
+  }
+  .btn-sm:hover  { filter:brightness(1.15); }
+  .btn-sm:active { transform:scale(.95); filter:brightness(.85); }
+  .btn-sm:disabled { opacity:.45; cursor:not-allowed; transform:none; filter:none; }
+  .btn-sm.accent { background:var(--accent); color:#000; }
+  .btn-sm.red    { background:var(--red); color:#fff; }
+  .btn-sm.muted  { background:var(--bg3); color:var(--muted); border:1px solid var(--border); }
+
+  /* big .btn buttons (start/stop/save etc.) */
+  .btn { transition:filter .1s, transform .1s !important; user-select:none; }
+  .btn:hover  { filter:brightness(1.12) !important; }
+  .btn:active { transform:scale(.97) !important; filter:brightness(.88) !important; }
+  .btn:disabled { opacity:.45 !important; cursor:not-allowed !important; }
+
+  /* ── COIN TAB (main layout) ──────────────── */
+  .dash-wrap { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+
+  .topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px; background:var(--bg2); border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .logo { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; letter-spacing:.1em; color:var(--accent); }
+  .logo span { color:var(--muted); font-weight:400; font-size:12px; margin-left:8px; }
+
+  .topbar-right { display:flex; align-items:center; gap:14px; }
+
+  .chip {
+    display:flex; align-items:center; gap:6px; background:var(--bg3);
+    border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:12px;
+  }
+  .chip .label { color:var(--muted); }
+  .chip .val   { font-weight:700; }
+  .chip .val.g { color:var(--accent); }
+  .chip .val.b { color:var(--accent2); }
+
+  .period-bar { display:flex; gap:4px; }
+  .period-btn {
+    padding:3px 10px; font-family:'Space Mono',monospace; font-size:10px;
+    background:var(--bg3); border:1px solid var(--border); border-radius:20px;
+    color:var(--muted); cursor:pointer; transition:all .15s;
+  }
+  .period-btn.active, .period-btn:hover { background:var(--accent); color:#000; border-color:var(--accent); }
+
+  /* chart mode tabs */
+  .chart-mode-bar { display:flex; gap:4px; }
+  .chart-mode-btn {
+    padding:3px 10px; font-family:'Space Mono',monospace; font-size:10px;
+    background:var(--bg3); border:1px solid var(--border); border-radius:20px;
+    color:var(--muted); cursor:pointer; transition:all .15s;
+  }
+  .chart-mode-btn.active { background:var(--accent2); color:#000; border-color:var(--accent2); }
+
+  .main-layout { flex:1; display:grid; grid-template-columns:290px 1fr 268px; overflow:hidden; }
+
+  /* LEFT */
+  .left-panel { border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; background:var(--bg2); }
+  .panel-section { border-bottom:1px solid var(--border); padding:12px 14px; }
+  .panel-title { font-family:'Syne',sans-serif; font-size:10px; font-weight:600; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; margin-bottom:10px; }
+
+  .mkt-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; font-size:12px; }
+  .mkt-label { color:var(--muted); }
+  .mkt-val { font-weight:700; }
+  .mkt-val.g { color:var(--accent); }
+  .mkt-val.r { color:var(--red); }
+  .mkt-val.y { color:var(--yellow); }
+
+  .ticker-strip { font-family:'Syne',sans-serif; font-size:11px; color:var(--muted); margin-bottom:6px; word-break:break-all; }
+
+  .odds-bar-wrap { margin:8px 0; }
+  .odds-bar-labels { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
+  .odds-bar { height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; border:1px solid var(--border); }
+  .odds-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .4s; }
+
+  .pos-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:var(--radius); font-size:11px; font-weight:700; margin-bottom:8px; }
+  .pos-badge.yes  { background:rgba(0,255,136,.12); color:var(--accent); border:1px solid rgba(0,255,136,.25); }
+  .pos-badge.no   { background:rgba(255,59,92,.12); color:var(--red);    border:1px solid rgba(255,59,92,.25); }
+  .pos-badge.flat { background:var(--bg3);           color:var(--muted); border:1px solid var(--border); }
+  .pos-detail { font-size:11px; color:var(--muted); line-height:1.7; }
+
+  .signal-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .signal-item { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:8px 10px; }
+  .signal-name { font-size:9px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; }
+  .signal-val { font-size:13px; font-weight:700; }
+  .signal-val.bull { color:var(--accent); }
+  .signal-val.bear { color:var(--red); }
+  .signal-val.neutral { color:var(--muted); }
+
+  .vote-bar-wrap { margin-top:10px; }
+  .vote-bar-label { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px; }
+  /* Bidirectional signal bar — center=neutral, left=YES, right=NO */
+  .vote-bar { height:8px; background:var(--bg3); border-radius:4px; border:1px solid var(--border); position:relative; }
+  .vote-bar-center { position:absolute; left:50%; top:0; width:1px; height:100%; background:rgba(74,98,114,.5); }
+  .vote-bar-fill {
+    position:absolute; top:0; height:100%;
+    transition:left .3s,width .3s,background .3s;
+    border-radius:4px;
+  }
+
+  .conviction-wrap { margin-top:10px; }
+  .conviction-label { font-size:10px; color:var(--muted); margin-bottom:4px; }
+  .conviction-dots { display:flex; gap:4px; }
+  .conv-dot { width:10px; height:10px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); transition:background .2s; }
+  .conv-dot.yes-dot.active { background:var(--accent); border-color:var(--accent); }
+  .conv-dot.no-dot.active  { background:var(--red); border-color:var(--red); }
+
+  .trades-table-wrap { overflow-x:auto; }
+  .trades-table { width:100%; border-collapse:collapse; font-size:10px; }
+  .trades-table th { color:var(--muted); font-weight:400; letter-spacing:.06em; padding:4px 6px; text-align:left; border-bottom:1px solid var(--border); }
+  .trades-table td { padding:5px 6px; border-bottom:1px solid rgba(26,42,54,.5); }
+  .trades-table tr:last-child td { border-bottom:none; }
+  .trades-table .buy  { color:var(--accent); }
+  .trades-table .sell { color:var(--orange); }
+  .trades-table .win  { color:var(--accent); }
+  .trades-table .loss { color:var(--red); }
+
+  .ks-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(26,42,54,.5); font-size:11px; }
+  .ks-row:last-child { border-bottom:none; }
+  .ks-label { color:var(--muted); }
+  .ks-val { font-weight:700; }
+
+  /* MIDDLE */
+  .mid-panel { display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
+
+  .chart-area { flex:1; position:relative; min-height:0; }
+  .chart-area canvas { position:absolute; inset:0; }
+
+  /* Kalshi odds mini-strip */
+  .odds-strip {
+    height:80px; flex-shrink:0; border-top:1px solid var(--border);
+    position:relative; background:var(--bg2);
+  }
+  .odds-strip canvas { position:absolute; inset:0; }
+  .odds-strip-label { position:absolute; top:4px; left:8px; font-size:9px; color:var(--muted); letter-spacing:.07em; z-index:2; }
+
+  .stats-bar { display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid var(--border); flex-shrink:0; }
+  .stat-cell { padding:10px 14px; border-right:1px solid var(--border); }
+  .stat-cell:last-child { border-right:none; }
+  .stat-label { font-size:9px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+  .stat-val { font-family:'Syne',sans-serif; font-size:21px; font-weight:800; }
+  .stat-val.g { color:var(--accent); }
+  .stat-val.r { color:var(--red); }
+  .stat-val.y { color:var(--yellow); }
+
+  /* terminal */
+  .terminal-wrap { height:170px; background:#020608; border-top:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+  .terminal-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; border-bottom:1px solid var(--border); background:var(--bg2); flex-shrink:0; }
+  .terminal-title { font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+  .terminal-status { font-size:10px; padding:2px 8px; border-radius:10px; background:var(--bg3); color:var(--muted); }
+  .terminal-status.running { background:rgba(0,255,136,.1); color:var(--accent); }
+  #bot-terminal { flex:1; overflow-y:auto; padding:8px 12px; font-size:11px; line-height:1.6; color:#7aab8a; }
+  #bot-terminal .log-warn { color:var(--yellow); }
+  #bot-terminal .log-err  { color:var(--red); }
+  #bot-terminal .log-info { color:var(--accent2); }
+  #bot-terminal .log-buy  { color:var(--accent); }
+  #bot-terminal .log-sell { color:var(--orange); }
+
+  /* RIGHT PANEL */
+  .right-panel { border-left:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; background:var(--bg2); }
+
+  /* wager mode toggle ($/%) */
+  .mode-toggle {
+    display:flex; background:var(--bg3); border:1px solid var(--border);
+    border-radius:20px; overflow:hidden; font-size:11px; font-weight:700;
+  }
+  .mode-opt {
+    padding:3px 12px; cursor:pointer; color:var(--muted); transition:all .15s;
+  }
+  .mode-opt.active { background:var(--accent2); color:#000; }
+
+  /* slider + number input side by side */
+  .slider-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .slider-row input[type=range] { flex:1; }
+  .inline-num {
+    width:62px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius);
+    color:var(--text); font-family:'Space Mono',monospace; font-size:11px;
+    padding:4px 6px; outline:none; text-align:right; transition:border-color .15s; flex-shrink:0;
+  }
+  .inline-num:focus { border-color:var(--accent2); }
+
+  .slider-top { display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:5px; }
+  .slider-label { color:var(--muted); }
+
+  input[type=range] {
+    -webkit-appearance:none; width:100%; height:4px; background:var(--bg3);
+    border-radius:2px; outline:none; border:1px solid var(--border);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--accent); cursor:pointer; box-shadow:0 0 6px rgba(0,255,136,.5);
+  }
+
+  /* feature toggles (TP, SL, longshot) */
+  .feature-toggle-row {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:6px; font-size:12px;
+  }
+  .feature-label { color:var(--muted); }
+  .feature-body { padding:8px 10px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; }
+
+  /* general toggle */
+  .toggle-wrap { position:relative; width:42px; height:22px; cursor:pointer; flex-shrink:0; }
+  .toggle-track { width:42px; height:22px; background:var(--bg3); border:1px solid var(--border); border-radius:11px; transition:background .2s,border-color .2s; }
+  .toggle-track.on { background:rgba(0,255,136,.2); border-color:var(--accent); }
+  .toggle-knob {
+    position:absolute; top:3px; left:3px; width:14px; height:14px;
+    background:var(--muted); border-radius:50%; transition:left .2s,background .2s; pointer-events:none;
+  }
+
+  /* buttons */
+  .btn { padding:9px 0; width:100%; font-family:'Syne',sans-serif; font-size:13px; font-weight:800; letter-spacing:.06em; border:none; border-radius:var(--radius); cursor:pointer; transition:opacity .15s,transform .1s; margin-bottom:8px; }
+  .btn:active { transform:scale(.98); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-start { background:var(--accent); color:#000; }
+  .btn-stop  { background:var(--red);    color:#fff; }
+  .btn-save  { background:var(--bg3); color:var(--muted); border:1px solid var(--border); font-size:11px; padding:7px 0; }
+  .btn-abort { background:rgba(255,140,66,.15); color:var(--orange); border:1px solid rgba(255,140,66,.3); font-size:11px; padding:7px 0; }
+
+  /* longshot section */
+  .longshot-section { border:1px solid rgba(255,200,55,.2); border-radius:var(--radius); padding:10px; background:rgba(255,200,55,.03); margin-bottom:10px; }
+  .longshot-title { font-size:9px; color:var(--yellow); letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .ls-badge { background:rgba(255,200,55,.15); color:var(--yellow); border:1px solid rgba(255,200,55,.3); border-radius:4px; padding:1px 5px; font-size:8px; }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- LIVE TICKER (always visible) -->
+<div class="live-ticker"><div class="ticker-track" id="ticker-track"><span class="ticker-item"><span style="color:var(--muted);font-size:10px">Loading…</span></span></div></div>
+
+<!-- TAB NAV -->
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('home')" id="tab-home-btn" style="font-family:'Syne',sans-serif;font-size:11px;margin-right:6px">⌂ HOME</button>
+  <button class="tab-btn" onclick="switchTab('BTC')"  id="tab-BTC-btn"><span class="tab-dot"></span>BTC</button>
+  <button class="tab-btn" onclick="switchTab('settings')" id="tab-settings-btn" style="margin-left:auto;font-size:11px">⚙ SETTINGS</button>
+</nav>
+
+<!-- ══════════════════════ HOME TAB ══════════════════════ -->
+<div class="tab-content active" id="tab-home">
+  <div class="home-wrap">
+    <div class="home-header">
+      <div>
+        <div class="home-title"><span style="display:inline-block;transform:scaleX(-1);letter-spacing:.05em">KALSHI</span>KILLER</div>
+        <div class="home-subtitle" id="home-clock">—</div>
+      </div>
+    </div>
+
+    <!-- Aggregate stats -->
+    <div class="home-stats">
+      <div class="home-stat-card">
+        <div class="home-stat-label">Balance</div>
+        <div class="home-stat-value" id="home-balance">—</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-label">Session P&L</div>
+        <div class="home-stat-value" id="home-session-pnl">—</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-label">Total Trades</div>
+        <div class="home-stat-value" id="home-total-trades">—</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-label">Active Bots</div>
+        <div class="home-stat-value" id="home-active-bots">—</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-label">Win Rate</div>
+        <div class="home-stat-value" id="home-win-rate">—</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-label">Avg P&L / Trade</div>
+        <div class="home-stat-value" id="home-avg-pnl">—</div>
+      </div>
+    </div>
+
+    <!-- Coin grid -->
+    <div>
+      <div class="section-label">Bots</div>
+      <div class="coin-grid" id="coin-grid"></div>
+    </div>
+
+    <!-- Cumulative P&L chart (full width) -->
+    <div class="analytics-chart-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div class="section-label" style="margin:0">Cumulative P&L</div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="period-btn active" id="chart-type-bar"  onclick="setBalanceChartType('bar')">BAR</button>
+          <button class="period-btn"        id="chart-type-line" onclick="setBalanceChartType('line')">LINE</button>
+          <span style="color:var(--border);padding:0 4px">|</span>
+          <button class="period-btn active" id="bal-period-day"   onclick="setBalancePeriod('day')">DAY</button>
+          <button class="period-btn"        id="bal-period-week"  onclick="setBalancePeriod('week')">WEEK</button>
+          <button class="period-btn"        id="bal-period-month" onclick="setBalancePeriod('month')">MONTH</button>
+          <button class="period-btn"        id="bal-period-all"   onclick="setBalancePeriod('all')">ALL</button>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="bal-coin-toggles"></div>
+      </div>
+      <canvas id="home-balance-chart" style="width:100%;height:160px;display:block"></canvas>
+    </div>
+
+    <!-- Claude Integration + Session Clock row -->
+    <div class="analytics-row" style="grid-template-columns:1fr 1fr">
+
+      <!-- Claude card -->
+      <div class="analytics-chart-wrap home-ctrl-card" id="claude-card"
+           style="border-color:rgba(207,127,66,.35);display:flex;flex-direction:column;padding:0">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:7px;padding:9px 13px 8px;border-bottom:1px solid var(--border)">
+          <span style="font-family:'Syne',sans-serif;font-size:9px;font-weight:700;letter-spacing:.14em;color:#cf7f42;text-transform:uppercase">Claude Code</span>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:11px 13px;display:flex;flex-direction:column;gap:9px">
+
+          <!-- Step 1: Install -->
+          <div style="background:rgba(207,127,66,.06);border:1px solid rgba(207,127,66,.2);border-radius:var(--radius);padding:9px 11px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#cf7f42;text-transform:uppercase;margin-bottom:5px">① Install</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:6px">Run once in Terminal:</div>
+            <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent2);background:rgba(0,0,0,.4);border-radius:4px;padding:6px 9px;user-select:all">npm install -g @anthropic-ai/claude-code</div>
+          </div>
+
+          <!-- Step 2: Launch -->
+          <div style="background:rgba(207,127,66,.06);border:1px solid rgba(207,127,66,.2);border-radius:var(--radius);padding:9px 11px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#cf7f42;text-transform:uppercase;margin-bottom:5px">② Launch</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:6px">Open Terminal in your bot folder and run:</div>
+            <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent2);background:rgba(0,0,0,.4);border-radius:4px;padding:6px 9px;user-select:all">claude</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-top:6px">Log in with your Anthropic account when prompted. Claude Code will read the CLAUDE.md in your folder and know the full project automatically.</div>
+          </div>
+
+          <!-- Step 3: Monitor prompt -->
+          <div style="background:rgba(207,127,66,.06);border:1px solid rgba(207,127,66,.2);border-radius:var(--radius);padding:9px 11px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#cf7f42;text-transform:uppercase">③ Monitor Prompt</span>
+              <button class="btn-sm muted" style="font-size:9px" onclick="
+                navigator.clipboard.writeText('Monitor the BTC bot live. Watch bot_status_BTC.json and signal_state_BTC.json, track today\'s trades and win rate, and alert me if anything looks off or win rate drops below 30%. Suggest config changes when needed. DO NOT ALTER ANY CODE.');
+                this.textContent='✓ copied';setTimeout(()=>this.textContent='COPY',2000)
+              ">COPY</button>
+            </div>
+            <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text2);background:rgba(0,0,0,.4);border-radius:4px;padding:7px 9px;line-height:1.6;user-select:all">Monitor the BTC bot live. Watch bot_status_BTC.json and signal_state_BTC.json, track today's trades and win rate, and alert me if anything looks off or win rate drops below 30%. Suggest config changes when needed. DO NOT ALTER ANY CODE.</div>
+          </div>
+
+        </div>
+
+        <!-- hidden placeholders so JS doesn't crash -->
+        <div id="claude-setup-panel" style="display:none"></div>
+        <div id="claude-toggle-setup-btn" style="display:none"></div>
+        <div id="claude-connected-panel" style="display:none"></div>
+        <div id="claude-check-result" style="display:none"></div>
+        <span id="claude-status-dot" style="display:none"></span>
+        <span id="claude-status-label" style="display:none"></span>
+        <span id="claude-status-dot2" style="display:none"></span>
+        <span id="step1-check" style="display:none"></span>
+        <span id="step2-check" style="display:none"></span>
+
+      </div><!-- /claude-card -->
+
+      <div class="analytics-chart-wrap" style="display:flex;flex-direction:column;align-items:center">
+        <div class="section-label" style="margin-bottom:8px;align-self:flex-start">24h Session Clock</div>
+        <canvas id="home-sess-clock" width="300" height="115"></canvas>
+      </div>
+    </div>
+
+    <!-- Global controls row -->
+    <div class="home-controls">
+
+      <!-- Hard stop floor -->
+      <div class="home-ctrl-card danger">
+        <div class="ctrl-card-title red">⚠ Hard Stop Floor</div>
+        <div class="hc-row">
+          <div class="toggle-wrap" onclick="toggleGlobalFeature('hard_stop',this)">
+            <div class="toggle-track" id="hs-track"></div>
+            <div class="toggle-knob" id="hs-knob"></div>
+          </div>
+          <span class="hc-label">Stop all bots if balance ≤</span>
+          <span class="hc-label">$</span>
+          <input type="number" id="hs-floor" class="home-input sm" value="0" min="0" step="1" placeholder="0">
+          <button class="btn-sm accent" onclick="saveGlobalSettings()">SET</button>
+        </div>
+        <div class="hc-row" style="margin-top:8px">
+          <span class="hc-label" style="color:var(--red)">Daily Loss Limit</span>
+          <span class="hc-label">$</span>
+          <input type="number" id="global-daily-loss" class="home-input sm" value="50" min="1" max="9999" step="1" placeholder="50">
+          <span class="hc-label" style="font-size:10px;color:var(--muted)">per day (all bots)</span>
+          <button class="btn-sm accent" onclick="saveGlobalSettings()">SET</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">Kills all bots immediately when Kalshi balance drops to or below the floor.</div>
+      </div>
+
+      <!-- Inverse Bet -->
+      <div class="home-ctrl-card" style="border-color:rgba(255,200,55,.2)">
+        <div class="ctrl-card-title" style="color:var(--yellow)">🔄 Inverse Bet</div>
+        <div class="hc-row">
+          <div class="toggle-wrap" onclick="toggleGlobalFeature('ib',this)">
+            <div class="toggle-track" id="ib-track"></div>
+            <div class="toggle-knob"  id="ib-knob"></div>
+          </div>
+          <span class="hc-label">Flip all bets to opposite side</span>
+          <button class="btn-sm accent" onclick="saveGlobalSettings()">SET</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">Bot picks the side normally — then buys the opposite at the last second.</div>
+      </div>
+
+      <!-- Auto-Manage -->
+      <div class="home-ctrl-card">
+        <div class="ctrl-card-title">⚙ Auto-Manage</div>
+        <div class="hc-row" style="margin-bottom:8px">
+          <span class="hc-label">Max Concurrent</span>
+          <input type="range" id="am-max-bots" min="1" max="7" step="1" value="7"
+            style="flex:1;margin:0 8px"
+            oninput="document.getElementById('am-max-val').textContent=this.value">
+          <span id="am-max-val" style="font-size:12px;color:var(--accent);min-width:10px;text-align:right">7</span>
+          <span class="hc-label" style="margin-left:2px">bots</span>
+        </div>
+        <div class="hc-row" style="margin-bottom:8px">
+          <span class="hc-label">Kill Switch</span>
+          <input type="number" id="am-kill-hrs" class="home-input sm" value="0" min="0" max="24" step="0.5" placeholder="hrs">
+          <span class="hc-label">hrs (0 = off)</span>
+        </div>
+        <div class="hc-row" style="margin-bottom:10px">
+          <span class="hc-label">ASIA Boost</span>
+          <div class="toggle-wrap" onclick="toggleGlobalFeature('sb',this)">
+            <div class="toggle-track" id="sb-track"></div>
+            <div class="toggle-knob"  id="sb-knob"></div>
+          </div>
+          <span class="hc-label" style="font-size:10px;flex:1">Stricter SA at night</span>
+        </div>
+        <button class="btn-sm accent" onclick="saveAutoManage()" style="width:100%">APPLY</button>
+      </div>
+
+    </div><!-- /home-controls -->
+  </div>
+</div>
+
+<!-- ══════════════════════ SETTINGS TAB ══════════════════════ -->
+<div class="tab-content" id="tab-settings">
+  <div class="home-wrap" style="max-width:760px">
+
+    <!-- Kalshi Credentials -->
+    <div class="home-ctrl-card" style="border-color:rgba(255,200,55,.2)">
+      <div class="ctrl-card-title" style="color:var(--yellow);margin-bottom:14px">🔑 Kalshi Account</div>
+      <div style="display:grid;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">API Key ID</span>
+          <input type="text" id="sys-kalshi-keyid" class="home-input" style="flex:1;font-size:12px;font-family:'Space Mono',monospace" placeholder="your-api-key-id">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Private Key Path</span>
+          <input type="text" id="sys-kalshi-keypath" class="home-input" style="flex:1;font-size:12px;font-family:'Space Mono',monospace" placeholder="/path/to/private_key.pem">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px"></span>
+          <button class="btn-sm accent" onclick="saveSystemSettings('kalshi')">SAVE</button>
+          <span style="font-size:10px;color:var(--muted)">⚠ Dashboard restart required to apply</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Telegram -->
+    <div class="home-ctrl-card tg" style="border-color:rgba(0,136,204,.3)">
+      <div class="ctrl-card-title blue" style="margin-bottom:14px">✈ Telegram Alerts</div>
+      <div style="display:grid;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Enable</span>
+          <div class="toggle-wrap" onclick="toggleGlobalFeature('telegram',this)">
+            <div class="toggle-track" id="tg-track"></div>
+            <div class="toggle-knob"  id="tg-knob"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Bot Token</span>
+          <input type="text" id="tg-token" class="home-input" style="flex:1;font-size:12px;font-family:'Space Mono',monospace" placeholder="8692298497:AAG…">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Allowed Chat ID</span>
+          <input type="text" id="tg-chatid" class="home-input" style="flex:1;font-size:12px;font-family:'Space Mono',monospace" placeholder="8597928412">
+          <button class="btn-sm accent" onclick="saveGlobalSettings()">SAVE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Assistant Config -->
+    <div class="home-ctrl-card" style="border-color:rgba(0,200,255,.2)">
+      <div class="ctrl-card-title blue" style="margin-bottom:14px">🤖 AI Assistant Setup</div>
+      <div style="display:grid;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Provider</span>
+          <select id="llm-provider" class="home-input" style="width:160px;font-size:12px" onchange="onLLMProviderChange()">
+            <option value="hermes">Hermes (local)</option>
+            <option value="ollama">Ollama (local)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="grok">xAI (Grok)</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Model</span>
+          <input type="text" id="llm-model" class="home-input" style="flex:1;font-size:12px" placeholder="llama3">
+          <span id="llm-model-hint" style="font-size:10px;color:var(--muted);white-space:nowrap"></span>
+        </div>
+        <div id="llm-ollama-hint" style="font-size:10px;color:var(--muted);padding-left:130px">
+          Run <code style="background:var(--bg3);padding:1px 4px;border-radius:3px">ollama list</code> in your terminal to see available model names.
+        </div>
+        <div id="llm-apikey-row" style="display:none;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">API Key</span>
+          <input type="password" id="llm-apikey" class="home-input" style="flex:1;font-size:12px" placeholder="sk-…">
+          <span id="llm-apikey-set" style="font-size:10px;color:var(--green);display:none">✓ set</span>
+        </div>
+        <div id="llm-url-row" style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px">Base URL</span>
+          <input type="text" id="llm-url" class="home-input" style="flex:1;font-size:12px" placeholder="http://localhost:11434" value="http://localhost:11434">
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:11px;color:var(--muted);min-width:120px;padding-top:2px">Permissions</span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer"><input type="checkbox" id="llm-perm-history" checked style="accent-color:var(--accent2)"> Trade History</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer"><input type="checkbox" id="llm-perm-signals" checked style="accent-color:var(--accent2)"> Signals</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer"><input type="checkbox" id="llm-perm-settings_read" checked style="accent-color:var(--accent2)"> Read Settings</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer"><input type="checkbox" id="llm-perm-settings_write" style="accent-color:var(--accent2)"> Change Settings</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer"><input type="checkbox" id="llm-perm-websearch" checked style="accent-color:var(--accent2)"> Web Search</label>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm accent" onclick="saveSystemSettings('ai')">SAVE AI CONFIG</button>
+          <span id="sys-ai-saved" style="font-size:10px;color:var(--green);display:none;align-self:center">✓ Saved</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ COIN TAB ══════════════════════ -->
+<div class="tab-content" id="tab-coin">
+  <div class="dash-wrap">
+
+    <!-- top bar -->
+    <div class="topbar">
+      <div class="logo" id="coin-logo">BTC<span>· KILLER</span></div>
+      <div class="topbar-right">
+        <div class="chart-mode-bar">
+          <button class="chart-mode-btn active" onclick="setChartMode('price',this)">PRICE</button>
+          <button class="chart-mode-btn" onclick="setChartMode('market',this)">MARKET</button>
+        </div>
+        <div class="chip"><span class="label" id="coin-label">BTC</span>&nbsp;<span class="val b" id="coin-price">—</span></div>
+        <div class="chip"><span class="label">BAL</span>&nbsp;<span class="val g" id="bal-val">—</span></div>
+        <div class="period-bar">
+          <button class="period-btn active" onclick="setPeriod('day',this)">1D</button>
+          <button class="period-btn" onclick="setPeriod('week',this)">1W</button>
+          <button class="period-btn" onclick="setPeriod('month',this)">1M</button>
+          <button class="period-btn" onclick="setPeriod('all',this)">ALL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- main layout -->
+    <div class="main-layout">
+
+      <!-- LEFT PANEL -->
+      <div class="left-panel">
+
+        <div class="panel-section">
+          <div class="panel-title">Market</div>
+          <div class="ticker-strip" id="ticker-strip">—</div>
+          <div class="mkt-row"><span class="mkt-label">Status</span><span class="mkt-val" id="mkt-status">—</span></div>
+          <div class="mkt-row"><span class="mkt-label">Time Rem</span><span class="mkt-val y" id="mkt-time">—</span></div>
+          <div class="mkt-row"><span class="mkt-label">YES Ask</span><span class="mkt-val g" id="yes-ask">—</span></div>
+          <div class="mkt-row"><span class="mkt-label">NO Ask</span><span class="mkt-val r" id="no-ask">—</span></div>
+          <div class="mkt-row"><span class="mkt-label">Volume</span><span class="mkt-val" id="mkt-vol">—</span></div>
+          <div class="odds-bar-wrap">
+            <div class="odds-bar-labels">
+              <span style="color:var(--accent)" id="yes-pct">YES —%</span>
+              <span style="color:var(--muted);font-size:9px">MARKET ODDS</span>
+              <span style="color:var(--red)"    id="no-pct">NO —%</span>
+            </div>
+            <div class="vote-bar">
+              <div class="vote-bar-center"></div>
+              <div class="vote-bar-fill" id="odds-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Position</div>
+          <div id="pos-badge" class="pos-badge flat">FLAT</div>
+          <div class="pos-detail" id="pos-detail">No open position</div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Signals</div>
+          <div class="signal-grid">
+            <div class="signal-item"><div class="signal-name">Momentum</div><div class="signal-val neutral" id="sig-momentum">—</div></div>
+            <div class="signal-item"><div class="signal-name">Liquidations</div><div class="signal-val neutral" id="sig-liq">—</div></div>
+            <div class="signal-item"><div class="signal-name">Kalshi</div><div class="signal-val neutral" id="sig-kalshi">—</div></div>
+            <div class="signal-item"><div class="signal-name">Crowd</div><div class="signal-val neutral" id="sig-crowd">—</div></div>
+            <div class="signal-item"><div class="signal-name">Multi-TF</div><div class="signal-val neutral" id="sig-multitf">—</div></div>
+            <div class="signal-item"><div class="signal-name">Order Book</div><div class="signal-val neutral" id="sig-orderbook">—</div></div>
+            <div class="signal-item"><div class="signal-name">Order Flow</div><div class="signal-val neutral" id="sig-orderflow">—</div></div>
+            <div class="signal-item"><div class="signal-name">Session</div><div class="signal-val neutral" id="sig-session">—</div></div>
+          </div>
+          <div class="vote-bar-wrap">
+            <div class="vote-bar-label">
+              <span style="color:var(--accent)" id="yes-votes-lbl">YES 0</span>
+              <span style="color:var(--muted);font-size:9px">SIGNAL BALANCE</span>
+              <span style="color:var(--red)"    id="no-votes-lbl">NO 0</span>
+            </div>
+            <div class="vote-bar">
+              <div class="vote-bar-center"></div>
+              <div class="vote-bar-fill" id="vote-fill"></div>
+            </div>
+          </div>
+          <div class="conviction-wrap">
+            <div class="conviction-label">Conviction Streak</div>
+            <div class="conviction-dots" id="conviction-dots"></div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Recent Trades</div>
+          <div class="trades-table-wrap">
+            <table class="trades-table">
+              <thead><tr><th>Time</th><th>Side</th><th>¢</th><th>Qty</th><th>P&L</th></tr></thead>
+              <tbody id="trades-body">
+                <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:10px">No trades</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Kalshi Stats</div>
+          <div class="ks-row"><span class="ks-label">Fills today</span><span class="ks-val" id="ks-fills">—</span></div>
+          <div class="ks-row"><span class="ks-label">Volume today</span><span class="ks-val" id="ks-vol">—</span></div>
+          <div class="ks-row"><span class="ks-label">Realized P&L</span><span class="ks-val" id="ks-pnl">—</span></div>
+          <div class="ks-row"><span class="ks-label">Avg buy price</span><span class="ks-val" id="ks-avg-buy">—</span></div>
+          <div class="ks-row"><span class="ks-label">Avg sell price</span><span class="ks-val" id="ks-avg-sell">—</span></div>
+        </div>
+
+      </div><!-- /left-panel -->
+
+      <!-- MIDDLE PANEL -->
+      <div class="mid-panel">
+        <!-- main chart area -->
+        <div class="chart-area" id="main-chart-area">
+          <canvas id="pnl-chart"></canvas>
+        </div>
+
+        <!-- Kalshi market odds strip -->
+        <div class="odds-strip" id="odds-strip-wrap">
+          <div class="odds-strip-label">MARKET YES PRICE (¢)</div>
+          <canvas id="odds-strip-chart"></canvas>
+        </div>
+
+        <!-- stats bar -->
+        <div class="stats-bar">
+          <div class="stat-cell"><div class="stat-label">P&L</div><div class="stat-val" id="stat-pnl">$0.00</div></div>
+          <div class="stat-cell"><div class="stat-label">Wins</div><div class="stat-val g" id="stat-wins">0</div></div>
+          <div class="stat-cell"><div class="stat-label">Losses</div><div class="stat-val r" id="stat-losses">0</div></div>
+          <div class="stat-cell"><div class="stat-label">Win Rate</div><div class="stat-val y" id="stat-wr">—</div></div>
+          <div class="stat-cell"><div class="stat-label">Trades</div><div class="stat-val" id="stat-trades">0</div></div>
+        </div>
+
+        <!-- terminal -->
+        <div class="terminal-wrap">
+          <div class="terminal-header">
+            <span class="terminal-title" id="term-title">BOT LOG · BTC</span>
+            <span class="terminal-status" id="bot-status-chip">IDLE</span>
+          </div>
+          <div id="bot-terminal"></div>
+        </div>
+      </div><!-- /mid-panel -->
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+        <div class="panel-section">
+          <div class="panel-title">Bot Controls</div>
+
+          <!-- Mode -->
+          <div style="display:flex;gap:6px;margin-bottom:12px;align-items:center">
+            <select id="bot-mode" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:4px 6px;outline:none;cursor:pointer">
+              <option value="balanced">Balanced</option>
+              <option value="selective">Selective</option>
+              <option value="aggressive">Aggressive</option>
+              <option value="always">Always</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <span style="font-size:10px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase">Wager Mode</span>
+            <div class="mode-toggle">
+              <span class="mode-opt active" id="wm-dollar" onclick="setWagerMode('dollar')">$</span>
+              <span class="mode-opt"        id="wm-pct"    onclick="setWagerMode('pct')">%</span>
+            </div>
+          </div>
+
+          <!-- Min Wager -->
+          <div style="margin-bottom:10px">
+            <div class="slider-top">
+              <span class="slider-label" id="min-wager-lbl">Min Wager ($)</span>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="wager-slider" min="0.01" max="500" step="0.01" value="1"
+                oninput="syncSliderToNum('wager-slider','wager-num')">
+              <input type="number" id="wager-num" class="inline-num" value="1.00" min="0.01" max="500" step="0.01"
+                oninput="syncNumToSlider('wager-num','wager-slider')">
+            </div>
+          </div>
+
+          <!-- Max Wager -->
+          <div style="margin-bottom:14px">
+            <div class="slider-top">
+              <span class="slider-label" id="max-wager-lbl">Max Wager ($)</span>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="max-wager-slider" min="0.01" max="1000" step="0.01" value="10"
+                oninput="syncSliderToNum('max-wager-slider','max-wager-num')">
+              <input type="number" id="max-wager-num" class="inline-num" value="10.00" min="0.01" max="1000" step="0.01"
+                oninput="syncNumToSlider('max-wager-num','max-wager-slider')">
+            </div>
+          </div>
+
+          <!-- Min Edge -->
+          <div style="margin-bottom:14px">
+            <div class="slider-top">
+              <span class="slider-label">Min Edge</span>
+              <span style="color:var(--accent);font-size:11px" id="min-edge-val">5%</span>
+            </div>
+            <input type="range" id="min-edge-slider" min="0" max="30" step="1" value="5"
+              oninput="document.getElementById('min-edge-val').textContent=this.value+'%'">
+          </div>
+
+          <!-- Max Buy Price -->
+          <div style="margin-bottom:14px">
+            <div class="slider-top">
+              <span class="slider-label">Max Buy Price</span>
+              <span style="color:var(--accent2);font-size:11px" id="max-buy-val">75¢</span>
+            </div>
+            <div class="slider-row">
+              <input type="range" id="max-buy-slider" min="1" max="99" step="1" value="75"
+                oninput="syncMaxBuy(this.value)">
+              <input type="number" id="max-buy-num" class="inline-num" value="75" min="1" max="99" step="1"
+                oninput="syncMaxBuyNum(this.value)">
+            </div>
+          </div>
+
+          <!-- Signal Agreement -->
+          <div style="margin-bottom:14px">
+            <div class="slider-top">
+              <span class="slider-label">Signal Agreement</span>
+              <span style="color:var(--accent);font-size:11px" id="sig-agree-val">3</span>
+            </div>
+            <input type="range" id="sig-agree-slider" min="1" max="6" step="1" value="3"
+              oninput="document.getElementById('sig-agree-val').textContent=this.value">
+          </div>
+
+          <!-- Take Profit toggle -->
+          <div class="feature-toggle-row">
+            <span class="feature-label">Take Profit</span>
+            <div class="toggle-wrap" onclick="toggleFeature('tp',this)">
+              <div class="toggle-track" id="tp-track"></div>
+              <div class="toggle-knob"  id="tp-knob"></div>
+            </div>
+          </div>
+          <div class="feature-body" id="tp-body" style="display:none">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--muted)">Sell at ≥</span>
+              <input type="number" id="take-profit" value="85" min="50" max="99" step="1"
+                style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--accent);font-family:'Space Mono',monospace;font-size:12px;padding:4px 8px;outline:none">
+              <span style="font-size:11px;color:var(--muted)">¢</span>
+            </div>
+          </div>
+
+          <!-- Stop Loss toggle -->
+          <div class="feature-toggle-row">
+            <span class="feature-label">Stop Loss</span>
+            <div class="toggle-wrap" onclick="toggleFeature('sl',this)">
+              <div class="toggle-track" id="sl-track"></div>
+              <div class="toggle-knob"  id="sl-knob"></div>
+            </div>
+          </div>
+          <div class="feature-body" id="sl-body" style="display:none">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--muted)">Exit at ≤</span>
+              <input type="number" id="stop-loss" value="15" min="1" max="49" step="1"
+                style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--red);font-family:'Space Mono',monospace;font-size:12px;padding:4px 8px;outline:none">
+              <span style="font-size:11px;color:var(--muted)">¢</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px"></div>
+
+          <!-- Longshot -->
+          <div class="longshot-section">
+            <div class="longshot-title"><span>1¢ Longshot</span><span class="ls-badge">BETA</span></div>
+            <div class="feature-toggle-row">
+              <span class="feature-label" style="font-size:11px">Enable</span>
+              <div class="toggle-wrap" onclick="toggleFeature('ls',this)">
+                <div class="toggle-track" id="ls-track"></div>
+                <div class="toggle-knob"  id="ls-knob"></div>
+              </div>
+            </div>
+            <div class="feature-body" id="ls-body" style="display:none">
+              <div style="margin-bottom:8px">
+                <div class="slider-top"><span class="slider-label">Longshot Wager ($)</span></div>
+                <div class="slider-row">
+                  <input type="range" id="ls-wager-slider" min="0.01" max="20" step="0.01" value="1"
+                    oninput="syncSliderToNum('ls-wager-slider','ls-wager-num')">
+                  <input type="number" id="ls-wager-num" class="inline-num" value="1.00" min="0.01" max="50" step="0.01"
+                    oninput="syncNumToSlider('ls-wager-num','ls-wager-slider')">
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--muted)">Stop at min</span>
+                <input type="number" id="ls-stop-mins" value="2" min="0" max="14" step="1"
+                  style="width:55px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--yellow);font-family:'Space Mono',monospace;font-size:12px;padding:4px 8px;outline:none">
+              </div>
+            </div>
+          </div>
+
+          <!-- Buy Window -->
+          <div style="margin-bottom:14px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)">
+            <div class="slider-top" style="margin-bottom:6px"><span class="slider-label">Buy Window</span><span style="font-size:10px;color:var(--muted)">mins remaining</span></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+              <span style="font-size:10px;color:var(--muted);width:36px">Open</span>
+              <input type="range" id="bw-open-slider" min="0" max="15" step="0.5" value="14"
+                oninput="document.getElementById('bw-open-val').textContent=this.value+'m';document.getElementById('bw-open-num').value=this.value" style="flex:1">
+              <input type="number" id="bw-open-num" class="inline-num" value="14" min="0" max="15" step="0.5"
+                oninput="document.getElementById('bw-open-slider').value=this.value;document.getElementById('bw-open-val').textContent=this.value+'m'">
+              <span style="font-size:10px;color:var(--accent2);min-width:28px" id="bw-open-val">14m</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:10px;color:var(--muted);width:36px">Close</span>
+              <input type="range" id="bw-close-slider" min="0" max="15" step="0.5" value="0.5"
+                oninput="document.getElementById('bw-close-val').textContent=this.value+'m';document.getElementById('bw-close-num').value=this.value" style="flex:1">
+              <input type="number" id="bw-close-num" class="inline-num" value="0.5" min="0" max="15" step="0.5"
+                oninput="document.getElementById('bw-close-slider').value=this.value;document.getElementById('bw-close-val').textContent=this.value+'m'">
+              <span style="font-size:10px;color:var(--accent2);min-width:28px" id="bw-close-val">0.5m</span>
+            </div>
+          </div>
+
+          <!-- Consecutive Loss Cooldown -->
+          <div class="feature-toggle-row">
+            <span class="feature-label">Loss Cooldown</span>
+            <div class="toggle-wrap" onclick="toggleFeature('hl',this)">
+              <div class="toggle-track" id="hl-track"></div>
+              <div class="toggle-knob"  id="hl-knob"></div>
+            </div>
+          </div>
+          <div class="feature-body" id="hl-body" style="display:none;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span style="font-size:11px;color:var(--muted)">Trigger after</span>
+              <input type="number" id="consec-loss-num" value="3" min="1" max="20" step="1"
+                style="width:52px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--red);font-family:'Space Mono',monospace;font-size:12px;padding:4px 6px;outline:none">
+              <span style="font-size:11px;color:var(--muted)">losses</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--muted)">Sit out</span>
+              <input type="range" id="cooldown-slider" min="1" max="20" step="1" value="3" style="flex:1"
+                oninput="document.getElementById('cooldown-val').textContent=this.value">
+              <span style="font-size:11px;color:var(--yellow);min-width:20px" id="cooldown-val">3</span>
+              <span style="font-size:11px;color:var(--muted)">markets</span>
+            </div>
+          </div>
+
+          <!-- Kelly Criterion -->
+          <div class="feature-toggle-row">
+            <span class="feature-label">Kelly Sizing</span>
+            <div class="toggle-wrap" onclick="toggleFeature('kelly',this)">
+              <div class="toggle-track" id="kelly-track"></div>
+              <div class="toggle-knob"  id="kelly-knob"></div>
+            </div>
+          </div>
+          <div class="feature-body" id="kelly-body" style="display:none;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--muted)">Fraction</span>
+              <input type="range" id="kelly-fraction-slider" min="1" max="100" step="1" value="25" style="flex:1"
+                oninput="document.getElementById('kelly-fraction-val').textContent=Math.round(this.value)+'%';document.getElementById('kelly-fraction-num').value=this.value">
+              <input type="number" id="kelly-fraction-num" value="25" min="1" max="100" step="1"
+                style="width:52px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--accent);font-family:'Space Mono',monospace;font-size:12px;padding:4px 8px;outline:none"
+                oninput="document.getElementById('kelly-fraction-slider').value=this.value;document.getElementById('kelly-fraction-val').textContent=Math.round(this.value)+'%'">
+              <span style="font-size:11px;color:var(--accent);min-width:32px" id="kelly-fraction-val">25%</span>
+            </div>
+          </div>
+
+          <!-- Hard Lock -->
+          <div class="feature-toggle-row" style="margin-bottom:14px;padding:8px;background:var(--bg);border:1px solid rgba(255,140,66,.25);border-radius:var(--radius)">
+            <span class="feature-label" style="color:var(--orange)">🔒 Lock Settings</span>
+            <div class="toggle-wrap" id="lock-toggle" onclick="toggleLock(this)">
+              <div class="toggle-track" id="lock-track"></div>
+              <div class="toggle-knob"  id="lock-knob"></div>
+            </div>
+          </div>
+
+          <button class="btn btn-save"  onclick="saveSettings()">SAVE SETTINGS</button>
+          <button class="btn btn-save"  onclick="applyToAll()" style="background:var(--blue);border-color:var(--blue);color:#fff">APPLY TO ALL</button>
+          <button class="btn btn-start" id="start-btn" onclick="startBot()">START BOT</button>
+          <button class="btn btn-stop"  id="stop-btn"  onclick="stopBot()" style="display:none">STOP BOT</button>
+          <button class="btn btn-abort" onclick="abortPosition()">ABORT POSITION</button>
+        </div>
+      </div><!-- /right-panel -->
+
+    </div><!-- /main-layout -->
+  </div><!-- /dash-wrap -->
+</div><!-- /tab-coin -->
+
+<script>
+// ── GLOBALS ──────────────────────────────────────────────────────────────────
+const COINS = ["BTC"];
+let activeCoin = "BTC";
+let activeTab  = "home";
+let chartMode  = "price";   // "price" | "market"
+let wagerMode  = "dollar";  // "dollar" | "pct"
+
+// Per-coin yes_ask history (for odds strip chart)
+const yesAskHistory = {};
+COINS.forEach(c => yesAskHistory[c] = []);
+
+let coinSettingsLoaded = {};
+let pollInterval        = null;
+let termInterval        = null;
+let homeInterval        = null;
+let tradesInterval      = null;
+let kalshiStatsInterval = null;
+let _marketCloseAt      = null;   // Date object — local countdown ticker
+let _countdownTimer     = null;
+let analyticsInterval   = null;
+let clockInterval       = null;
+
+// Live ticker event ring buffer
+const _tickerEvents = [];
+const _prevCoinState = {};
+
+// Feature toggle states
+const featureOn = { tp: false, sl: false, ls: false, hl: false, kelly: false };
+
+// Per-coin hard lock (survives tab switches, stored in memory)
+const lockedCoins = {};
+
+// Balance chart state
+let balancePeriod    = 'day';
+let balanceChartType = 'bar'; // always open as bar; user can toggle to LINE
+let balanceCoinShow  = {};
+COINS.forEach(c => balanceCoinShow[c] = true);
+let balanceChartData = {};
+let _lastSettledCount = 0; // used to detect new settlements and trigger chart refresh
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const btnId = tab === 'home' ? 'tab-home-btn'
+              : tab === 'settings' ? 'tab-settings-btn'
+              : 'tab-'+tab+'-btn';
+  const btn = document.getElementById(btnId);
+  if (btn) btn.classList.add('active');
+
+  const isHome     = tab === 'home';
+  const isSettings = tab === 'settings';
+  const isCoin     = !isHome && !isSettings;
+
+  document.getElementById('tab-home').classList.toggle('active', isHome);
+  document.getElementById('tab-settings').classList.toggle('active', isSettings);
+  document.getElementById('tab-coin').classList.toggle('active', isCoin);
+  activeTab = tab;
+
+  if (isHome) {
+    clearInterval(pollInterval); clearInterval(termInterval);
+    clearInterval(tradesInterval); clearInterval(kalshiStatsInterval);
+    startHomePolling();
+  } else if (isSettings) {
+    clearInterval(homeInterval);
+    clearInterval(pollInterval); clearInterval(termInterval);
+    clearInterval(tradesInterval); clearInterval(kalshiStatsInterval);
+    loadSystemSettings();
+    loadGlobalSettings();
+  } else {
+    clearInterval(homeInterval);
+    activeCoin = tab;
+    updateCoinHeader();
+    loadCoinSettingsIfNeeded(tab);
+    startCoinPolling();
+  }
+}
+
+function updateCoinHeader() {
+  document.getElementById('coin-logo').innerHTML = activeCoin + '<span>· KILLER</span>';
+  document.getElementById('coin-label').textContent = activeCoin;
+  document.getElementById('term-title').textContent = 'BOT LOG · ' + activeCoin;
+}
+
+function updateTabDot(coin, running) {
+  const btn = document.getElementById('tab-'+coin+'-btn');
+  if (!btn) return;
+  running ? btn.classList.add('running') : btn.classList.remove('running');
+}
+
+// ── HOME POLLING ──────────────────────────────────────────────────────────────
+function startHomePolling() {
+  clearInterval(homeInterval);
+  clearInterval(analyticsInterval);
+  clearInterval(clockInterval);
+  fetchHomeState();
+  fetchAnalytics();
+  fetchBalanceHistory();
+  drawSessionClock();
+  homeInterval      = setInterval(fetchHomeState, 500);
+  analyticsInterval = setInterval(fetchAnalytics, 30000);
+  clockInterval     = setInterval(drawSessionClock, 15000);
+  setInterval(fetchBalanceHistory, 15000);
+}
+
+async function fetchHomeState() {
+  try {
+    const r = await fetch('/api/home');
+    const d = await r.json();
+    renderHomeState(d);
+  } catch(e) {}
+}
+
+function renderHomeState(d) {
+  document.getElementById('home-clock').textContent = new Date().toLocaleTimeString();
+
+  const bal = d.balance != null ? '$'+d.balance.toFixed(2) : '—';
+  document.getElementById('home-balance').textContent = bal;
+
+  const sp = d.session_pnl != null ? (d.session_pnl >= 0 ? '+' : '') + '$' + d.session_pnl.toFixed(2) : '—';
+  const spEl = document.getElementById('home-session-pnl');
+  spEl.textContent = sp;
+  spEl.className = 'home-stat-value' + (d.session_pnl > 0 ? ' green' : d.session_pnl < 0 ? ' red' : '');
+
+  const tot = (d.total_wins||0) + (d.total_losses||0);
+  document.getElementById('home-total-trades').textContent = tot;
+  // Refresh chart immediately whenever a new trade settles
+  if (tot !== _lastSettledCount) { _lastSettledCount = tot; fetchBalanceHistory(); }
+  const active = (d.coins||[]).filter(c => c.running).length;
+  document.getElementById('home-active-bots').textContent = active + ' / ' + COINS.length;
+
+  // Win rate + avg P&L across all coins
+  const allCoins = d.coins || [];
+  const totalW = allCoins.reduce((s,c)=>s+(c.wins||0),0);
+  const totalL = allCoins.reduce((s,c)=>s+(c.losses||0),0);
+  const totalT = totalW + totalL;
+  const wrEl = document.getElementById('home-win-rate');
+  wrEl.textContent = totalT>0 ? (totalW/totalT*100).toFixed(0)+'%' : '—';
+  wrEl.className = 'home-stat-value'+(totalT>0&&totalW/totalT>=0.5?' green':totalT>0?' red':'');
+
+  const totalPnl = allCoins.reduce((s,c)=>s+(c.pnl||0),0);
+  const avgPnl = totalT>0 ? totalPnl/totalT : null;
+  const apEl = document.getElementById('home-avg-pnl');
+  apEl.textContent = avgPnl!=null ? (avgPnl>=0?'+$':'-$')+Math.abs(avgPnl).toFixed(2) : '—';
+  apEl.className = 'home-stat-value'+(avgPnl>0?' green':avgPnl<0?' red':'');
+
+  renderCoinGrid(d.coins || []);
+  drawHomePnLChart(d.coins || []);
+  updateLiveTicker(d);
+}
+
+function renderCoinGrid(coins) {
+  const grid = document.getElementById('coin-grid');
+  grid.innerHTML = '';
+  coins.forEach(c => {
+    updateTabDot(c.coin, c.running);
+    const pnl = c.pnl != null ? (c.pnl >= 0 ? '+$' : '-$') + Math.abs(c.pnl).toFixed(2) : '$0.00';
+    const pnlColor = c.pnl > 0 ? 'var(--accent)' : c.pnl < 0 ? 'var(--red)' : 'var(--muted)';
+    const price = c.price != null ? '$' + Number(c.price).toLocaleString() : '—';
+    const cW = c.wins || 0, cL = c.losses || 0, cT = cW + cL;
+    const wr = c.win_rate != null ? c.win_rate.toFixed(0)+'%'
+             : cT > 0 ? (cW/cT*100).toFixed(0)+'%' : '—';
+
+    // Position info
+    let posHtml = '<div class="coin-card-pos" style="color:var(--muted);font-size:10px">FLAT</div>';
+    if (c.current_position && c.current_position.side) {
+      const p = c.current_position;
+      const dir = p.side ? p.side.toUpperCase() : '?';
+      const pc  = p.price ? Math.round(p.price*100)+'¢' : '';
+      const dirColor = dir==='YES' ? 'var(--accent)' : 'var(--red)';
+      posHtml = `<div class="coin-card-pos" style="color:${dirColor};font-size:10px;font-weight:700">${dir} ${pc} ×${p.contracts||''}</div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'coin-card' + (c.running ? ' running' : '');
+    card.style.cursor = 'pointer';
+    card.onclick = (e) => { if (!e.target.closest('button')) switchTab(c.coin); };
+    // Build signal dots row
+    const sigDefs = [
+      {key:'momentum', label:'MOM'},
+      {key:'liq',      label:'LIQ'},
+      {key:'crowd',    label:'CRD'},
+      {key:'orderbook',label:'OBK'},
+      {key:'orderflow',label:'OFL'},
+      {key:'multi_tf', label:'MTF'},
+      {key:'kalshi',   label:'KAL'},
+    ];
+    const sigs = c.signals || {};
+    const conv = c.conviction;
+    const sigDotsHtml = sigDefs.map(d => {
+      const v = sigs[d.key] || 'neutral';
+      const col = v==='bull' ? '#00ff88' : v==='bear' ? '#ff3b5c' : '#2a4252';
+      return `<span title="${d.label}: ${v}" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};margin:0 1px"></span>`;
+    }).join('');
+    const convStr = conv != null ? Math.round(conv*100)+'%' : '--';
+    const convColor = conv==null ? 'var(--muted)' : conv>=0.6 ? '#00ff88' : conv>=0.4 ? '#f0c040' : '#ff3b5c';
+
+    card.innerHTML = `
+      <div class="coin-card-top"><div class="coin-card-name">${c.coin}</div><div class="coin-card-dot"></div></div>
+      <div class="coin-card-price">${price}</div>
+      <div class="coin-card-pnl" style="color:${pnlColor}">${pnl}</div>
+      ${posHtml}
+      <div style="display:flex;align-items:center;gap:5px;margin:3px 0 2px">
+        <div style="display:flex;align-items:center;gap:1px">${sigDotsHtml}</div>
+        <span style="font-size:9px;font-family:'Space Mono',monospace;color:${convColor}">${convStr}</span>
+      </div>
+      <div class="coin-card-stats">W:${c.wins||0} L:${c.losses||0} WR:${wr} · ${c.trades_today||0} trades</div>
+      <div class="coin-card-btns">
+        ${c.running
+          ? `<button class="coin-card-btn stop" onclick="homeStopBot('${c.coin}',this)">STOP</button>`
+          : `<button class="coin-card-btn start" onclick="homeStartBot('${c.coin}',this)">START</button>`}
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function drawHomePnLChart(coins) {
+  const canvas = document.getElementById('home-pnl-chart');
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 600, H = 130;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const vals   = coins.map(c => c.pnl || 0);
+  const maxAbs = Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals)), 0.01);
+  const midY   = H / 2;
+  const barW   = Math.floor((W-40) / coins.length) - 6;
+  ctx.strokeStyle='rgba(26,42,54,.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(20,midY); ctx.lineTo(W-20,midY); ctx.stroke();
+  coins.forEach((c,i) => {
+    const x    = 20 + i*((W-40)/coins.length) + 3;
+    const pnl  = c.pnl || 0;
+    const barH = Math.abs(pnl)/maxAbs*(midY-20);
+    const isP  = pnl >= 0;
+    ctx.fillStyle = isP ? 'rgba(0,255,136,.7)' : 'rgba(255,59,92,.7)';
+    const bY = isP ? midY-barH : midY;
+    ctx.beginPath(); ctx.roundRect(x, bY, barW, barH, 3); ctx.fill();
+    ctx.fillStyle='rgba(74,98,114,.8)'; ctx.font='9px Space Mono'; ctx.textAlign='center';
+    ctx.fillText(c.coin, x+barW/2, H-4);
+  });
+}
+
+// ── ANALYTICS ────────────────────────────────────────────────────────────────
+let analyticsData = null;
+
+async function fetchAnalytics() {
+  try {
+    const r = await fetch('/api/analytics');
+    analyticsData = await r.json();
+    drawWinRateChart(analyticsData);
+    drawSessionClock();
+  } catch(e) {}
+}
+
+function drawWinRateChart(data) {
+  const canvas = document.getElementById('home-wr-chart');
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 400, H = 115;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const coinData = (data.coin || []).sort((a,b)=>(b.win_rate||0)-(a.win_rate||0));
+  if (!coinData.length || coinData.every(c=>!c.trades)) {
+    ctx.fillStyle='rgba(74,98,114,.5)'; ctx.font='11px Space Mono';
+    ctx.textAlign='center'; ctx.fillText('No trade data yet', W/2, H/2+4);
+    return;
+  }
+  const nRows = coinData.length;
+  const rowH = Math.floor((H-8) / nRows);
+  const labelW = 34, padR = 58;
+  const barMax = W - labelW - padR - 4;
+  coinData.forEach((c,i) => {
+    const y = 4 + i*rowH;
+    const wr = c.win_rate || 0;
+    const bW = Math.max(2, wr/100 * barMax);
+    const col = wr>=55?'rgba(0,255,136,.75)':wr>=40?'rgba(255,200,55,.75)':'rgba(255,59,92,.75)';
+    // coin label
+    ctx.fillStyle='rgba(74,98,114,.85)'; ctx.font='9px Syne';
+    ctx.textAlign='right'; ctx.fillText(c.coin||'?', labelW-3, y+rowH-5);
+    // bar bg
+    ctx.fillStyle='rgba(26,42,54,.7)';
+    ctx.beginPath(); ctx.roundRect(labelW, y+2, barMax, rowH-5, 2); ctx.fill();
+    // bar fill
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.roundRect(labelW, y+2, bW, rowH-5, 2); ctx.fill();
+    // labels on right
+    ctx.fillStyle=col; ctx.font='9px Space Mono'; ctx.textAlign='left';
+    ctx.fillText(wr.toFixed(0)+'% · '+c.trades+'t', labelW+bW+5, y+rowH-5);
+  });
+}
+
+function drawSessionClock() {
+  const canvas = document.getElementById('home-sess-clock');
+  if (!canvas) return;
+  const par = canvas.parentElement;
+  const W = Math.min(par.offsetWidth||300, 420);
+  if (W < 20) return;
+  const H = Math.round(W * 0.42);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H*0.98, R = H*0.88;
+  const hrToAngle = h => Math.PI + (h/24)*Math.PI;
+
+  const sessions = [
+    { label:'ASIA', start:0,  end:8,  color:'rgba(0,200,255,.28)',  lc:'rgba(0,200,255,.75)' },
+    { label:'EU',   start:8,  end:14, color:'rgba(255,200,55,.28)', lc:'rgba(255,200,55,.75)' },
+    { label:'US',   start:14, end:24, color:'rgba(255,59,92,.28)',   lc:'rgba(255,59,92,.75)' },
+  ];
+
+  sessions.forEach(s => {
+    const a1=hrToAngle(s.start), a2=hrToAngle(s.end);
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, a1, a2);
+    ctx.arc(cx, cy, R*0.5, a2, a1, true);
+    ctx.closePath();
+    ctx.fillStyle=s.color; ctx.fill();
+    ctx.strokeStyle=s.lc.replace('.75','.35'); ctx.lineWidth=0.5; ctx.stroke();
+
+    const midH=(s.start+s.end)/2, midA=hrToAngle(midH);
+    const lr=R*0.75;
+    ctx.fillStyle=s.lc; ctx.font='bold 9px Syne'; ctx.textAlign='center';
+    ctx.fillText(s.label, cx+Math.cos(midA)*lr, cy+Math.sin(midA)*lr+3);
+
+    if (analyticsData&&analyticsData.session) {
+      const sd=analyticsData.session[s.label];
+      if (sd) {
+        const tot=sd.wins+sd.losses||1;
+        const wr=(sd.wins/tot*100).toFixed(0)+'%';
+        ctx.fillStyle='rgba(200,220,240,.55)'; ctx.font='8px Space Mono';
+        ctx.fillText(wr, cx+Math.cos(midA)*lr, cy+Math.sin(midA)*lr+13);
+      }
+    }
+  });
+
+  for (let h=0; h<=24; h+=3) {
+    const a=hrToAngle(h);
+    const x1=cx+Math.cos(a)*(R-2), y1=cy+Math.sin(a)*(R-2);
+    const x2=cx+Math.cos(a)*(R+5), y2=cy+Math.sin(a)*(R+5);
+    ctx.strokeStyle='rgba(74,98,114,.5)'; ctx.lineWidth=h%6===0?1.5:0.75;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    if (h%6===0 && h>0 && h<24) {
+      ctx.fillStyle='rgba(74,98,114,.65)'; ctx.font='7px Space Mono'; ctx.textAlign='center';
+      const lx=cx+Math.cos(a)*(R+13), ly=cy+Math.sin(a)*(R+13);
+      ctx.fillText(h+'h', lx, ly+3);
+    }
+  }
+
+  ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI, 2*Math.PI);
+  ctx.strokeStyle='rgba(26,42,54,.8)'; ctx.lineWidth=1; ctx.stroke();
+
+  const now=new Date();
+  const utcH=now.getUTCHours()+now.getUTCMinutes()/60;
+  const needleA=hrToAngle(utcH);
+  const nx=cx+Math.cos(needleA)*R*0.87, ny=cy+Math.sin(needleA)*R*0.87;
+  ctx.strokeStyle='rgba(0,255,136,.95)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nx,ny); ctx.stroke();
+  ctx.fillStyle='#00ff88';
+  ctx.beginPath(); ctx.arc(nx,ny,3,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle='rgba(15,24,32,1)';
+  ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(74,98,114,.6)'; ctx.lineWidth=1; ctx.stroke();
+
+  const hStr=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0');
+  ctx.fillStyle='rgba(0,255,136,.9)'; ctx.font='bold 10px Space Mono'; ctx.textAlign='center';
+  ctx.fillText(hStr+' UTC', cx, cy-10);
+}
+
+// ── LIVE TICKER ──────────────────────────────────────────────────────────────
+function updateLiveTicker(d) {
+  const coins = d.coins || [];
+
+  // detect new wins/losses and push events
+  coins.forEach(c => {
+    const prev = _prevCoinState[c.coin];
+    if (prev) {
+      const deltaW = (c.wins||0)-(prev.wins||0);
+      const deltaL = (c.losses||0)-(prev.losses||0);
+      const deltaPnl = (c.pnl||0)-(prev.pnl||0);
+      if (deltaW>0) _tickerEvents.unshift({
+        html:`<span class="t-event-win">✅ ${c.coin} +$${Math.abs(deltaPnl).toFixed(2)}</span>`
+      });
+      if (deltaL>0) _tickerEvents.unshift({
+        html:`<span class="t-event-loss">❌ ${c.coin} -$${Math.abs(deltaPnl).toFixed(2)}</span>`
+      });
+    }
+    _prevCoinState[c.coin] = Object.assign({}, c);
+  });
+  if (_tickerEvents.length > 20) _tickerEvents.length = 20;
+
+  // build items: coin price block + recent events
+  const items = [];
+  coins.forEach(c => {
+    const price = c.price!=null ? '$'+Number(c.price).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
+    const pnlStr = c.pnl!=null && c.pnl!==0 ? ` <span class="${c.pnl>=0?'t-pnl-pos':'t-pnl-neg'}">${c.pnl>=0?'+':''} $${Math.abs(c.pnl).toFixed(2)}</span>` : '';
+    const dotCls = c.running ? 'on' : 'off';
+    items.push(`<span class="t-dot ${dotCls}"></span><span class="t-coin">${c.coin}</span><span class="t-price">${price}</span>${pnlStr}`);
+  });
+  _tickerEvents.slice(0,10).forEach(ev => items.push(ev.html));
+
+  const trackEl = document.getElementById('ticker-track');
+  if (!trackEl) return;
+  const half = items.map(h=>`<span class="ticker-item">${h}</span>`).join('');
+  trackEl.innerHTML = half + half; // duplicate for seamless infinite scroll
+}
+
+// ── AUTO-MANAGE ──────────────────────────────────────────────────────────────
+async function saveAutoManage() {
+  try {
+    const cur = await (await fetch('/api/global_settings')).json();
+    const payload = {
+      ...cur,
+      max_concurrent_bots: parseInt(document.getElementById('am-max-bots').value)||7,
+      kill_switch_hrs:     parseFloat(document.getElementById('am-kill-hrs').value)||0,
+      session_boost:       document.getElementById('sb-knob')?.style.left==='19px',
+    };
+    await fetch('/api/global_settings', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+  } catch(e) {}
+}
+
+async function homeStartBot(coin, btn) {
+  btn.disabled = true;
+  try {
+    await fetch('/api/bot/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({coin}) });
+    setTimeout(fetchHomeState, 500);
+  } catch(e) {}
+  btn.disabled = false;
+}
+async function homeStopBot(coin, btn) {
+  btn.disabled = true;
+  try {
+    await fetch('/api/bot/stop', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({coin}) });
+    setTimeout(fetchHomeState, 500);
+  } catch(e) {}
+  btn.disabled = false;
+}
+
+// ── SYSTEM SETTINGS (Kalshi credentials, AI config) ───────────────────────────
+async function loadSystemSettings() {
+  try {
+    const r = await fetch('/api/system_settings');
+    const d = await r.json();
+    if (d.kalshi_api_key_id)      document.getElementById('sys-kalshi-keyid').value   = d.kalshi_api_key_id;
+    if (d.kalshi_private_key_path) document.getElementById('sys-kalshi-keypath').value = d.kalshi_private_key_path;
+    // AI
+    const prov = d.llm_provider || 'ollama';
+    document.getElementById('llm-provider').value = prov;
+    if (d.llm_model) document.getElementById('llm-model').value = d.llm_model;
+    if (d.llm_url)   document.getElementById('llm-url').value   = d.llm_url;
+    if (d.llm_api_key_set) {
+      document.getElementById('llm-apikey-set').style.display = 'inline';
+    }
+    onLLMProviderChange();
+    // Permissions
+    ['history','signals','settings_read','settings_write','websearch'].forEach(k => {
+      const el = document.getElementById('llm-perm-'+k);
+      if (el && d['llm_perm_'+k] != null) el.checked = d['llm_perm_'+k];
+    });
+  } catch(e) {}
+}
+
+async function saveSystemSettings(section) {
+  let payload = {};
+  if (section === 'kalshi' || section === 'all') {
+    payload.kalshi_api_key_id       = document.getElementById('sys-kalshi-keyid').value.trim();
+    payload.kalshi_private_key_path = document.getElementById('sys-kalshi-keypath').value.trim();
+  }
+  if (section === 'ai' || section === 'all') {
+    payload.llm_provider = document.getElementById('llm-provider').value;
+    payload.llm_model    = document.getElementById('llm-model').value.trim();
+    payload.llm_url      = document.getElementById('llm-url').value.trim();
+    const key = document.getElementById('llm-apikey').value.trim();
+    if (key) payload.llm_api_key = key;
+    ['history','signals','settings_read','settings_write','websearch'].forEach(k => {
+      const el = document.getElementById('llm-perm-'+k);
+      if (el) payload['llm_perm_'+k] = el.checked;
+    });
+  }
+  try {
+    await fetch('/api/system_settings', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    const saved = document.getElementById('sys-ai-saved');
+    if (saved) { saved.style.display='inline'; setTimeout(()=>saved.style.display='none', 2500); }
+  } catch(e) {}
+}
+
+// ── GLOBAL SETTINGS (hard stop, telegram) ─────────────────────────────────────
+async function loadGlobalSettings() {
+  try {
+    const r = await fetch('/api/global_settings');
+    const d = await r.json();
+    applyGlobalSettings(d);
+  } catch(e) {}
+}
+
+function applyGlobalSettings(d) {
+  setToggle('hs', d.hard_stop_enabled);
+  if (d.hard_stop_floor    != null) document.getElementById('hs-floor').value         = d.hard_stop_floor;
+  if (d.daily_loss_limit   != null) document.getElementById('global-daily-loss').value= d.daily_loss_limit;
+  setToggle('ib', d.inverse_bet_enabled);
+  setToggle('tg', d.telegram_enabled);
+  if (d.telegram_token)  document.getElementById('tg-token').value  = d.telegram_token;
+  if (d.telegram_chat_id) document.getElementById('tg-chatid').value = d.telegram_chat_id;
+}
+
+function setToggle(prefix, on) {
+  const track = document.getElementById(prefix+'-track');
+  const knob  = document.getElementById(prefix+'-knob');
+  if (!track || !knob) return;
+  if (on) {
+    track.classList.add('on');
+    knob.style.left='19px'; knob.style.background='var(--accent)';
+  } else {
+    track.classList.remove('on');
+    knob.style.left='3px'; knob.style.background='var(--muted)';
+  }
+}
+
+function isOn(prefix) {
+  const knob = document.getElementById(prefix+'-knob');
+  return knob && knob.style.left === '19px';
+}
+
+function toggleGlobalFeature(feature, wrap) {
+  const track = wrap.querySelector('.toggle-track');
+  const knob  = wrap.querySelector('.toggle-knob');
+  const on    = knob.style.left === '19px';
+  if (on) {
+    track.classList.remove('on'); knob.style.left='3px'; knob.style.background='var(--muted)';
+  } else {
+    track.classList.add('on'); knob.style.left='19px'; knob.style.background='var(--accent)';
+  }
+}
+
+async function saveGlobalSettings() {
+  const payload = {
+    hard_stop_enabled:   isOn('hs'),
+    hard_stop_floor:     parseFloat(document.getElementById('hs-floor').value) || 0,
+    daily_loss_limit:    parseFloat(document.getElementById('global-daily-loss').value) || 50,
+    inverse_bet_enabled: isOn('ib'),
+    telegram_enabled:    isOn('tg'),
+    telegram_token:      document.getElementById('tg-token').value.trim(),
+    telegram_chat_id:  document.getElementById('tg-chatid').value.trim(),
+  };
+  try {
+    await fetch('/api/global_settings', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+  } catch(e) {}
+}
+
+// ── COIN POLLING ──────────────────────────────────────────────────────────────
+function startCoinPolling() {
+  clearInterval(pollInterval); clearInterval(termInterval);
+  clearInterval(tradesInterval); clearInterval(kalshiStatsInterval);
+  fetchState(); loadTrades(); loadKalshiStats();
+  pollInterval       = setInterval(fetchState,       400);
+  termInterval       = setInterval(pollBotTerminal,  400);
+  tradesInterval     = setInterval(loadTrades,      5000);  // refresh trades every 10s
+  kalshiStatsInterval= setInterval(loadKalshiStats, 30000);  // refresh Kalshi stats every 30s
+}
+
+async function fetchState() {
+  try {
+    const r = await fetch('/api/state?coin='+activeCoin);
+    const d = await r.json();
+    renderState(d);
+  } catch(e) {}
+}
+
+function renderState(d) {
+  // price
+  const price = d.coin_price != null ? '$'+Number(d.coin_price).toLocaleString(undefined,{maximumFractionDigits:2}) : '—';
+  document.getElementById('coin-price').textContent = price;
+  if (d.balance != null) document.getElementById('bal-val').textContent = '$'+d.balance.toFixed(2);
+
+  // market
+  const s = d.market_state || d;
+  const ticker = d.market_ticker;
+  document.getElementById('ticker-strip').textContent = ticker || '—';
+  document.getElementById('mkt-status').textContent   = d.bot_status || '—';
+  const secsRem = d.secs_remaining;
+  if (secsRem != null && secsRem > 0) {
+    _marketCloseAt = new Date(Date.now() + secsRem * 1000);
+    _tickCountdown();
+    if (!_countdownTimer) _countdownTimer = setInterval(_tickCountdown, 1000);
+  } else {
+    _marketCloseAt = null;
+    if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
+    document.getElementById('mkt-time').textContent = '—';
+  }
+  const ya = d.yes_ask, na = d.no_ask;
+  // yes_ask/no_ask are stored as dollars (0.0–1.0); convert to cents for display
+  const yaCents = ya != null ? Math.round(ya * 100) : null;
+  const naCents = na != null ? Math.round(na * 100) : null;
+  document.getElementById('yes-ask').textContent = yaCents != null ? yaCents+'¢' : '—';
+  document.getElementById('no-ask').textContent  = naCents != null ? naCents+'¢' : '—';
+
+  // track yes_ask for odds strip
+  if (ya != null) {
+    yesAskHistory[activeCoin].push({t: Date.now(), v: yaCents});
+    if (yesAskHistory[activeCoin].length > 200) yesAskHistory[activeCoin].shift();
+    drawOddsStrip();
+  }
+
+  // odds bar — bidirectional, center=50/50, YES pulls left, NO pulls right
+  if (yaCents != null) {
+    document.getElementById('yes-pct').textContent = 'YES '+yaCents+'%';
+    document.getElementById('no-pct').textContent  = 'NO '+(100-yaCents)+'%';
+    const fill = document.getElementById('odds-fill');
+    if (fill) {
+      const yesPct = yaCents / 100;
+      if (yesPct >= 0.5) {
+        const w = (yesPct - 0.5) * 100;
+        fill.style.left = (50 - w)+'%';
+        fill.style.width = w+'%';
+        fill.style.background = 'rgba(0,255,136,.7)';
+      } else {
+        const w = (0.5 - yesPct) * 100;
+        fill.style.left = '50%';
+        fill.style.width = w+'%';
+        fill.style.background = 'rgba(255,59,92,.7)';
+      }
+    }
+  }
+
+  // position
+  const pos = d.current_position || {};
+  const pfp = pos.position_fp || (pos.side==='yes'?1:pos.side==='no'?-1:0) * (pos.contracts||0);
+  const badge = document.getElementById('pos-badge');
+  const detail = document.getElementById('pos-detail');
+  if (pfp > 0) {
+    badge.className='pos-badge yes'; badge.textContent='▲ YES '+pfp;
+    detail.textContent = pos.price ? '@ '+pos.price+'¢' : '';
+  } else if (pfp < 0) {
+    badge.className='pos-badge no'; badge.textContent='▼ NO '+Math.abs(pfp);
+    detail.textContent = pos.price ? '@ '+pos.price+'¢' : '';
+  } else {
+    badge.className='pos-badge flat'; badge.textContent='FLAT'; detail.textContent='No open position';
+  }
+
+  // signals
+  const sig = d.signals || {};
+  renderSignal('sig-momentum', sig.momentum);
+  renderSignal('sig-liq',      sig.liq);
+  renderSignal('sig-kalshi',   sig.kalshi);
+  renderSignal('sig-crowd',    sig.crowd);
+  renderSignal('sig-multitf',  sig.multi_tf);
+  renderSignal('sig-orderbook', sig.orderbook);
+  renderSignal('sig-orderflow', sig.orderflow);
+  renderSignalSession();
+
+  const yv = sig.yes_votes||0, nv = sig.no_votes||0, total = yv+nv||1;
+  document.getElementById('yes-votes-lbl').textContent='YES '+yv;
+  document.getElementById('no-votes-lbl').textContent='NO '+nv;
+  // Bidirectional bar: center=50%, YES pulls left, NO pulls right
+  const yesPct = yv/total; // 0-1, 0.5=neutral
+  const fill = document.getElementById('vote-fill');
+  if (fill) {
+    if (yesPct >= 0.5) {
+      // YES dominant: fill from midpoint leftward
+      const w = (yesPct - 0.5) * 100;
+      fill.style.left = (50 - w)+'%';
+      fill.style.width = w+'%';
+      fill.style.background = 'rgba(0,255,136,.7)';
+    } else {
+      // NO dominant: fill from midpoint rightward
+      const w = (0.5 - yesPct) * 100;
+      fill.style.left = '50%';
+      fill.style.width = w+'%';
+      fill.style.background = 'rgba(255,59,92,.7)';
+    }
+  }
+  renderConviction(sig.conviction_streak||0, sig.conviction_dir||'yes');
+
+  // stats — always use CSV-based values (updated every 5s, never false-zeros)
+  const stats = d;
+  const pnl  = stats.pnl_today  ?? 0;
+  const wins = stats.wins_today  ?? 0;
+  const lss  = stats.losses_today ?? 0;
+  const tot  = wins + lss;
+  const pnlEl = document.getElementById('stat-pnl');
+  pnlEl.textContent = (pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2);
+  pnlEl.className = 'stat-val'+(pnl>0?' g':pnl<0?' r':'');
+  document.getElementById('stat-wins').textContent   = wins;
+  document.getElementById('stat-losses').textContent = lss;
+  const wr = tot > 0 ? (wins/tot*100).toFixed(0)+'%' : '—';
+  document.getElementById('stat-wr').textContent     = wr;
+  document.getElementById('stat-trades').textContent = stats.trades_today||0;
+
+  // P&L chart
+  if (chartMode === 'price' && d.price_history && d.price_history.length > 1) {
+    drawPriceChart(d.price_history, d.target_price, d.target_dir);
+  }
+
+  // bot running state
+  updateBotRunningUI(d.bot_running || false);
+  updateTabDot(activeCoin, d.bot_running || false);
+}
+
+function _tickCountdown() {
+  const el = document.getElementById('mkt-time');
+  if (!el) return;
+  if (!_marketCloseAt) { el.textContent = '—'; return; }
+  const secs = Math.max(0, Math.round((_marketCloseAt - Date.now()) / 1000));
+  if (secs === 0) {
+    el.textContent = '0:00';
+    clearInterval(_countdownTimer); _countdownTimer = null; _marketCloseAt = null;
+    return;
+  }
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  el.textContent = m + ':' + String(s).padStart(2, '0');
+}
+
+function renderSignalSession() {
+  // Determine current UTC hour for session signal
+  const h = new Date().getUTCHours();
+  let session, val;
+  if (h >= 0 && h < 8)       { session='ASIA';   val='bull'; }
+  else if (h >= 8 && h < 14) { session='EUROPE'; val='neutral'; }
+  else                         { session='US';     val='neutral'; }
+  const el = document.getElementById('sig-session');
+  if (el) { el.textContent=session; el.className='signal-val '+val; }
+}
+
+function renderSignal(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (val == null) { el.textContent='—'; el.className='signal-val neutral'; return; }
+  const v = String(val).toUpperCase();
+  el.textContent = v;
+  if (['BULL','YES','LONG','UP'].includes(v))   el.className='signal-val bull';
+  else if (['BEAR','NO','SHORT','DOWN'].includes(v)) el.className='signal-val bear';
+  else el.className='signal-val neutral';
+}
+
+function renderConviction(streak, dir) {
+  const wrap = document.getElementById('conviction-dots');
+  wrap.innerHTML = '';
+  for (let i=0; i<5; i++) {
+    const d = document.createElement('div');
+    d.className='conv-dot '+(dir==='yes'?'yes-dot':'no-dot')+(i<Math.abs(streak)?' active':'');
+    wrap.appendChild(d);
+  }
+}
+
+function updateBotRunningUI(running) {
+  const chip    = document.getElementById('bot-status-chip');
+  const startBtn= document.getElementById('start-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  chip.textContent = running ? 'RUNNING' : 'IDLE';
+  chip.className   = 'terminal-status' + (running ? ' running' : '');
+  startBtn.style.display = running ? 'none' : 'block';
+  stopBtn.style.display  = running ? 'block' : 'none';
+}
+
+// ── CHART MODE ────────────────────────────────────────────────────────────────
+function setChartMode(mode, btn) {
+  chartMode = mode;
+  document.querySelectorAll('.chart-mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (mode === 'market') {
+    loadKalshiChart();
+  }
+}
+
+function drawPriceChart(history, targetPrice, targetDir) {
+  const canvas = document.getElementById('pnl-chart');
+  if (!canvas) return;
+  const W = canvas.parentElement.offsetWidth||600, H = canvas.parentElement.offsetHeight||300;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  if (history.length < 2) return;
+  const prices = history.map(h => h.price||h);
+  const currentPrice = prices[prices.length-1];
+
+  // Include target price in range so it's always visible
+  const allPrices = targetPrice ? [...prices, targetPrice] : prices;
+  const minP=Math.min(...allPrices), maxP=Math.max(...allPrices), range=(maxP-minP)||1;
+  const pad={t:36,b:30,l:20,r:20};
+  const cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  const toX = i => pad.l+(i/(history.length-1))*cW;
+  const toY = p => pad.t+(1-(p-minP)/range)*cH;
+
+  // Price line
+  ctx.strokeStyle='rgba(0,200,255,.6)'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  history.forEach((h,i) => i===0?ctx.moveTo(toX(i),toY(h.price||h)):ctx.lineTo(toX(i),toY(h.price||h)));
+  ctx.stroke();
+
+  // Fill under line
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,'rgba(0,200,255,.15)'); grad.addColorStop(1,'rgba(0,200,255,0)');
+  ctx.fillStyle=grad; ctx.beginPath();
+  history.forEach((h,i) => i===0?ctx.moveTo(toX(i),toY(h.price||h)):ctx.lineTo(toX(i),toY(h.price||h)));
+  ctx.lineTo(toX(history.length-1),H-pad.b); ctx.lineTo(toX(0),H-pad.b); ctx.closePath(); ctx.fill();
+
+  // Target price line
+  if (targetPrice) {
+    const ty = toY(targetPrice);
+    const isAbove = currentPrice > targetPrice; // price is above target (good for "above" bets)
+    const tCol = isAbove ? 'rgba(0,255,136,.7)' : 'rgba(255,59,92,.7)';
+    ctx.strokeStyle=tCol; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(pad.l,ty); ctx.lineTo(W-pad.r,ty); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=tCol; ctx.font='bold 10px Space Mono'; ctx.textAlign='left';
+    ctx.fillText('TARGET $'+Number(targetPrice).toLocaleString(), pad.l+4, ty-4);
+
+    // Distance from target — centered, above or below depending on direction
+    const dist = currentPrice - targetPrice;
+    const distPct = Math.abs(dist/targetPrice*100).toFixed(2);
+    const distStr = (dist>=0?'+':'')+dist.toFixed(0)+' ('+distPct+'% '+(dist>=0?'above':'below')+')';
+    const labelY = isAbove ? pad.t-4 : H-6;
+    ctx.fillStyle = isAbove ? 'rgba(0,255,136,.9)' : 'rgba(255,59,92,.9)';
+    ctx.font='bold 11px Syne'; ctx.textAlign='center';
+    ctx.fillText('$'+distStr, W/2, labelY);
+  }
+
+  // Price labels
+  ctx.fillStyle='rgba(74,98,114,.8)'; ctx.font='10px Space Mono'; ctx.textAlign='right';
+  ctx.fillText('$'+maxP.toLocaleString(),W-pad.r,pad.t+10);
+  ctx.fillText('$'+minP.toLocaleString(),W-pad.r,H-pad.b-4);
+}
+
+function drawKalshiCandleChart(candles) {
+  const canvas = document.getElementById('pnl-chart');
+  if (!canvas || !candles.length) return;
+  const W=canvas.parentElement.offsetWidth||600, H=canvas.parentElement.offsetHeight||300;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const prices=candles.flatMap(c=>[c.open,c.high,c.low,c.close].filter(Boolean).map(Number));
+  if (!prices.length) return;
+  const minP=Math.min(...prices), maxP=Math.max(...prices), range=(maxP-minP)||1;
+  const pad={t:20,b:30,l:30,r:10};
+  const cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  const n=candles.length;
+  const barW=Math.max(2, Math.floor(cW/n)-2);
+  const toY=p=>pad.t+(1-(Number(p)-minP)/range)*cH;
+  candles.forEach((c,i)=>{
+    const x=pad.l+i*(cW/n);
+    const o=toY(c.open||c.yes_open||50);
+    const cl=toY(c.close||c.yes_close||50);
+    const hi=toY(c.high||c.yes_high||50);
+    const lo=toY(c.low||c.yes_low||50);
+    const isUp=(Number(c.close||50)>=Number(c.open||50));
+    const col=isUp?'rgba(0,255,136,.8)':'rgba(255,59,92,.8)';
+    ctx.strokeStyle=col; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x+barW/2,hi); ctx.lineTo(x+barW/2,lo); ctx.stroke();
+    ctx.fillStyle=col;
+    ctx.fillRect(x, Math.min(o,cl), barW, Math.abs(cl-o)||1);
+  });
+  // labels
+  ctx.fillStyle='rgba(74,98,114,.8)'; ctx.font='10px Space Mono'; ctx.textAlign='right';
+  ctx.fillText(maxP.toFixed(0)+'¢', W-pad.r, pad.t+10);
+  ctx.fillText(minP.toFixed(0)+'¢', W-pad.r, H-pad.b-4);
+  ctx.fillStyle='rgba(74,98,114,.5)'; ctx.textAlign='left'; ctx.font='10px Syne';
+  ctx.fillText('KALSHI YES PRICE', pad.l+4, pad.t+14);
+}
+
+async function loadKalshiChart() {
+  try {
+    const r = await fetch('/api/kalshi_chart?coin='+activeCoin);
+    const d = await r.json();
+    if (d.ok && d.candles && d.candles.length) {
+      drawKalshiCandleChart(d.candles);
+    }
+  } catch(e) {}
+}
+
+function drawOddsStrip() {
+  const canvas = document.getElementById('odds-strip-chart');
+  if (!canvas) return;
+  const W=canvas.parentElement.offsetWidth||600, H=80;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const hist = yesAskHistory[activeCoin];
+  if (hist.length < 2) return;
+  const vals=hist.map(h=>h.v);
+  const minV=Math.max(0,Math.min(...vals)-3), maxV=Math.min(100,Math.max(...vals)+3), range=(maxV-minV)||1;
+  const pad={t:14,b:16,l:4,r:4};
+  const cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  const toX=i=>pad.l+(i/(hist.length-1))*cW;
+  const toY=v=>pad.t+(1-(v-minV)/range)*cH;
+  // 50% line
+  ctx.strokeStyle='rgba(26,42,54,.6)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  const mid=toY(50);
+  if (mid>pad.t&&mid<H-pad.b) { ctx.beginPath(); ctx.moveTo(pad.l,mid); ctx.lineTo(pad.l+cW,mid); ctx.stroke(); }
+  ctx.setLineDash([]);
+  // fill
+  const lastV=vals[vals.length-1];
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  if (lastV>=50) { grad.addColorStop(0,'rgba(0,255,136,.25)'); grad.addColorStop(1,'rgba(0,255,136,0)'); }
+  else           { grad.addColorStop(0,'rgba(255,59,92,0)');   grad.addColorStop(1,'rgba(255,59,92,.25)'); }
+  ctx.fillStyle=grad; ctx.beginPath();
+  hist.forEach((h,i)=>i===0?ctx.moveTo(toX(i),toY(h.v)):ctx.lineTo(toX(i),toY(h.v)));
+  ctx.lineTo(toX(hist.length-1),H-pad.b); ctx.lineTo(pad.l,H-pad.b); ctx.closePath(); ctx.fill();
+  // line
+  ctx.strokeStyle=lastV>=50?'rgba(0,255,136,.8)':'rgba(255,59,92,.8)'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  hist.forEach((h,i)=>i===0?ctx.moveTo(toX(i),toY(h.v)):ctx.lineTo(toX(i),toY(h.v)));
+  ctx.stroke();
+  // labels
+  ctx.fillStyle='rgba(74,98,114,.8)'; ctx.font='9px Space Mono';
+  ctx.textAlign='right'; ctx.fillText(maxV.toFixed(0)+'¢',W-pad.r,pad.t+8);
+  ctx.fillText(minV.toFixed(0)+'¢',W-pad.r,H-pad.b-2);
+  ctx.textAlign='left'; ctx.fillStyle=lastV>=50?'rgba(0,255,136,.8)':'rgba(255,59,92,.8)';
+  ctx.fillText(lastV+'¢',pad.l+4,pad.t+8);
+}
+
+// ── BOT TERMINAL ──────────────────────────────────────────────────────────────
+async function pollBotTerminal() {
+  try {
+    const r = await fetch('/api/bot/log?coin='+activeCoin);
+    const d = await r.json();
+    const term = document.getElementById('bot-terminal');
+    const atBot = term.scrollHeight-term.scrollTop-term.clientHeight < 60;
+    term.innerHTML=(d.lines||d.log||[]).map(line=>`<div class="${classifyLog(line)}">${escHtml(line)}</div>`).join('');
+    if (atBot) term.scrollTop=term.scrollHeight;
+  } catch(e) {}
+}
+
+function classifyLog(line) {
+  const l=line.toLowerCase();
+  if (l.includes('error')||l.includes('exception')||l.includes('traceback')) return 'log-err';
+  if (l.includes('warn'))   return 'log-warn';
+  if (l.includes('buy')||l.includes('bought')||l.includes('longshot')) return 'log-buy';
+  if (l.includes('sell')||l.includes('sold')||l.includes('close'))     return 'log-sell';
+  if (l.includes('info')||l.includes('start')||l.includes('connect'))  return 'log-info';
+  return '';
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── TRADES ────────────────────────────────────────────────────────────────────
+async function loadTrades() {
+  try {
+    const r = await fetch('/api/trades?coin='+activeCoin);
+    const rows = await r.json();
+    const tbody = document.getElementById('trades-body');
+    if (!rows.length) {
+      tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:10px">No trades</td></tr>'; return;
+    }
+    tbody.innerHTML=rows.slice(-20).reverse().map(t=>{
+      const side=t.action||t.side||'—';
+      const pnl=t.pnl!=null?((t.pnl>=0?'+$':'-$')+Math.abs(t.pnl).toFixed(2)):'—';
+      const pnlCl=t.pnl>0?'win':t.pnl<0?'loss':'';
+      const time=t.time?t.time.slice(11,16):(t.timestamp?t.timestamp.slice(11,16):'—');
+      return `<tr><td>${time}</td><td class="${side.toLowerCase().includes('buy')?'buy':'sell'}">${side}</td><td>${t.price||t.cent||'—'}</td><td>${t.qty||t.contracts||'—'}</td><td class="${pnlCl}">${pnl}</td></tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ── KALSHI STATS ──────────────────────────────────────────────────────────────
+async function loadKalshiStats() {
+  // First: render whatever we already have from coin_state (instant, from CSV)
+  try {
+    const snap = await fetch('/api/state?coin='+activeCoin);
+    const sd   = await snap.json();
+    const w = sd.wins_today||0, l = sd.losses_today||0;
+    const pnl = sd.pnl_today||0;
+    document.getElementById('ks-fills').textContent = w + l;
+    document.getElementById('ks-pnl').textContent   = (pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2);
+    document.getElementById('ks-vol').textContent   = sd.kalshi_total_cost!=null?'$'+sd.kalshi_total_cost.toFixed(2):'—';
+  } catch(e) {}
+  // Then: try Kalshi API for more precise fills data (may be slower)
+  try {
+    const r = await fetch('/api/kalshi_stats?coin='+activeCoin);
+    const d = await r.json();
+    if (!d.ok && d.error) return; // API call failed; keep CSV values above
+    document.getElementById('ks-fills').textContent    = d.total_trades||d.fills||0;
+    document.getElementById('ks-vol').textContent      = d.total_cost!=null?'$'+d.total_cost.toFixed(2):'—';
+    document.getElementById('ks-pnl').textContent      = d.pnl!=null?(d.pnl>=0?'+$':'-$')+Math.abs(d.pnl).toFixed(2):'—';
+    document.getElementById('ks-avg-buy').textContent  = d.avg_buy!=null?d.avg_buy+'¢':'—';
+    document.getElementById('ks-avg-sell').textContent = d.avg_sell!=null?d.avg_sell+'¢':'—';
+  } catch(e) {}
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+async function loadCoinSettingsIfNeeded(coin) {
+  // Always reload on tab switch — never serve stale settings from another coin's DOM state
+  coinSettingsLoaded[coin] = false;
+  try {
+    const r   = await fetch('/api/settings?coin='+coin);
+    const cfg = await r.json();
+    applySettings(cfg);
+    // Apply hard-lock state
+    const locked = (lockedCoins[coin] === true);
+    const lockEl = document.getElementById('lock-toggle');
+    if (lockEl) {
+      lockEl.dataset.coin = coin;
+      setLockState(locked);
+    }
+  } catch(e) {}
+}
+
+function applySettings(cfg) {
+  // Mode dropdown
+  if (cfg.mode) {
+    const sel = document.getElementById('bot-mode');
+    if (sel) sel.value = cfg.mode;
+  }
+  // Wager mode
+  if (cfg.wager_mode) setWagerMode(cfg.wager_mode);
+
+  const isPct = (cfg.wager_mode === 'pct');
+  let minW, maxW;
+  if (isPct) {
+    // Load percentage values — prefer explicit pct fields, fallback to wager_pct
+    minW = cfg.wager_pct_min != null ? cfg.wager_pct_min : (cfg.wager_pct || 1);
+    maxW = cfg.wager_pct     != null ? cfg.wager_pct     : 10;
+  } else {
+    minW = cfg.wager || cfg.min_wager || 1;
+    maxW = (cfg.max_wager < 99000 ? cfg.max_wager : null) || cfg.max_session_wager || 10;
+  }
+  document.getElementById('wager-slider').value = minW;
+  document.getElementById('wager-num').value    = Number(minW).toFixed(isPct ? 1 : 2);
+  document.getElementById('max-wager-slider').value = maxW;
+  document.getElementById('max-wager-num').value    = Number(maxW).toFixed(isPct ? 1 : 2);
+
+  if (cfg.min_ev_edge != null) {
+    const pct = Math.round(((cfg.min_ev_edge ?? 0.05))*100);
+    document.getElementById('min-edge-slider').value = pct;
+    document.getElementById('min-edge-val').textContent = pct+'%';
+  }
+
+  if (cfg.always_max_price != null) {
+    const mb = Math.round(((cfg.always_max_price ?? 0.75))*100);
+    document.getElementById('max-buy-slider').value = mb;
+    document.getElementById('max-buy-num').value    = mb;
+    document.getElementById('max-buy-val').textContent = mb+'¢';
+  }
+
+  // take profit
+  if (cfg.take_profit_cents && cfg.take_profit_cents > 0) {
+    setFeature('tp', true);
+    document.getElementById('take-profit').value = cfg.take_profit_cents;
+  } else {
+    setFeature('tp', false);
+  }
+
+  // stop loss
+  if (cfg.stop_loss_cents && cfg.stop_loss_cents > 0) {
+    setFeature('sl', true);
+    document.getElementById('stop-loss').value = cfg.stop_loss_cents;
+  } else {
+    setFeature('sl', false);
+  }
+
+  // longshot
+  if (cfg.penny_enabled) {
+    setFeature('ls', true);
+    const lsW = cfg.penny_wager || 1;
+    document.getElementById('ls-wager-slider').value = lsW;
+    document.getElementById('ls-wager-num').value    = Number(lsW).toFixed(2);
+    if (cfg.penny_stop_mins != null) document.getElementById('ls-stop-mins').value = cfg.penny_stop_mins;
+  } else {
+    setFeature('ls', false);
+  }
+
+  // buy window
+  const bwOpen  = cfg.buy_window_open  ?? cfg.always_open  ?? 14;
+  const bwClose = cfg.buy_window_close ?? cfg.always_close ?? 0.5;
+  document.getElementById('bw-open-slider').value  = bwOpen;
+  document.getElementById('bw-open-num').value     = bwOpen;
+  document.getElementById('bw-open-val').textContent = bwOpen+'m';
+  document.getElementById('bw-close-slider').value = bwClose;
+  document.getElementById('bw-close-num').value    = bwClose;
+  document.getElementById('bw-close-val').textContent = bwClose+'m';
+
+  // consecutive loss cooldown
+  if (cfg.hourly_loss_enabled) {
+    setFeature('hl', true);
+    const cl = cfg.consec_loss_trigger ?? cfg.hourly_loss_limit ?? 3;
+    const clInt = parseInt(cl) || 3;
+    document.getElementById('consec-loss-num').value = clInt;
+    if (cfg.cooldown_markets != null) {
+      document.getElementById('cooldown-slider').value = cfg.cooldown_markets;
+      document.getElementById('cooldown-val').textContent = cfg.cooldown_markets;
+    }
+  } else {
+    setFeature('hl', false);
+  }
+
+  // kelly
+  if (cfg.kelly_enabled) {
+    setFeature('kelly', true);
+    const kf = Math.round((cfg.kelly_fraction ?? 0.25) * 100);
+    document.getElementById('kelly-fraction-slider').value = kf;
+    document.getElementById('kelly-fraction-num').value    = kf;
+    document.getElementById('kelly-fraction-val').textContent = kf + '%';
+  } else {
+    setFeature('kelly', false);
+  }
+}
+
+async function saveSettings() {
+  const cfg = gatherSettings();
+  try {
+    await fetch('/api/settings?coin='+activeCoin, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)
+    });
+    coinSettingsLoaded[activeCoin] = false;
+  } catch(e) {}
+}
+
+async function applyToAll() {
+  const cfg = gatherSettings();
+  const btn = document.querySelector('[onclick="applyToAll()"]');
+  const orig = btn.textContent;
+  btn.textContent = 'APPLYING...';
+  btn.disabled = true;
+  const targets = COINS.filter(c => c !== activeCoin && !lockedCoins[c]);
+  // Always save current coin too
+  targets.push(activeCoin);
+  try {
+    await Promise.all(targets.map(c =>
+      fetch('/api/settings?coin='+c, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)
+      })
+    ));
+    targets.forEach(c => { coinSettingsLoaded[c] = false; });
+    const skipped = COINS.filter(c => lockedCoins[c] && c !== activeCoin);
+    btn.textContent = skipped.length ? `✓ APPLIED (${skipped.join(',')} locked)` : '✓ APPLIED';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  } catch(e) {
+    btn.textContent = 'ERROR';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+  }
+}
+
+function gatherSettings() {
+  const minVal = parseFloat(document.getElementById('wager-num').value) || 1;
+  const maxVal = parseFloat(document.getElementById('max-wager-num').value) || 10;
+  const isPct  = wagerMode === 'pct';
+  return {
+    mode:                 document.getElementById('bot-mode').value || 'balanced',
+    wager_mode:           wagerMode,
+    // Dollar mode: wager=min$, max_wager=max$
+    // Pct mode:    wager_pct_min=min%, wager_pct=max%, wager/max_wager not used for sizing
+    wager:                isPct ? 0.01      : minVal,
+    max_wager:            isPct ? 99999     : maxVal,
+    wager_pct_min:        isPct ? minVal    : 0,
+    wager_pct:            isPct ? maxVal    : 0,
+    min_ev_edge:          (parseInt(document.getElementById('min-edge-slider').value) ?? 0)/100,
+    signal_agreement:     parseInt(document.getElementById('sig-agree-slider').value)||3,
+    always_max_price:     (parseInt(document.getElementById('max-buy-num').value) ?? 75)/100,
+    take_profit_cents:    featureOn.tp ? (parseInt(document.getElementById('take-profit').value)||0) : 0,
+    stop_loss_cents:      featureOn.sl ? (parseInt(document.getElementById('stop-loss').value)||0) : 0,
+    penny_enabled:        featureOn.ls,
+    penny_wager:          parseFloat(document.getElementById('ls-wager-num').value)||1,
+    penny_stop_mins:      parseInt(document.getElementById('ls-stop-mins').value)||2,
+    buy_window_open:      parseFloat(document.getElementById('bw-open-num').value) ?? 14,
+    buy_window_close:     parseFloat(document.getElementById('bw-close-num').value) ?? 0.5,
+    hourly_loss_enabled:  featureOn.hl,
+    consec_loss_trigger:  parseInt(document.getElementById('consec-loss-num').value)||3,
+    cooldown_markets:     parseInt(document.getElementById('cooldown-slider').value)||3,
+    kelly_enabled:        featureOn.kelly,
+    kelly_fraction:       (parseInt(document.getElementById('kelly-fraction-num').value)||25) / 100,
+  };
+}
+
+// ── WAGER MODE ────────────────────────────────────────────────────────────────
+function setWagerMode(mode) {
+  wagerMode = mode;
+  document.getElementById('wm-dollar').classList.toggle('active', mode==='dollar');
+  document.getElementById('wm-pct').classList.toggle('active', mode==='pct');
+  const lbl = mode==='dollar' ? '$' : '%';
+  document.getElementById('min-wager-lbl').textContent  = 'Min Wager ('+lbl+')';
+  document.getElementById('max-wager-lbl').textContent  = 'Max Wager ('+lbl+')';
+  // adjust slider range for %
+  const minS=document.getElementById('wager-slider');
+  const maxS=document.getElementById('max-wager-slider');
+  if (mode==='pct') {
+    minS.min='0.01'; minS.max='100'; minS.step='0.01';
+    maxS.min='0.01'; maxS.max='100'; maxS.step='0.01';
+  } else {
+    minS.min='0.01'; minS.max='500'; minS.step='0.01';
+    maxS.min='0.01'; maxS.max='1000'; maxS.step='0.01';
+  }
+}
+
+// ── FEATURE TOGGLES (TP, SL, LS) ─────────────────────────────────────────────
+function toggleFeature(id, wrap) {
+  setFeature(id, !featureOn[id]);
+}
+
+function setFeature(id, on) {
+  featureOn[id] = on;
+  const trackMap = { tp:'tp-track', sl:'sl-track', ls:'ls-track', hl:'hl-track', kelly:'kelly-track' };
+  const knobMap  = { tp:'tp-knob',  sl:'sl-knob',  ls:'ls-knob',  hl:'hl-knob',  kelly:'kelly-knob'  };
+  const bodyMap  = { tp:'tp-body',  sl:'sl-body',  ls:'ls-body',  hl:'hl-body',  kelly:'kelly-body'  };
+  const track=document.getElementById(trackMap[id]);
+  const knob =document.getElementById(knobMap[id]);
+  const body =document.getElementById(bodyMap[id]);
+  if (!track||!knob) return;
+  if (on) {
+    track.classList.add('on'); knob.style.left='19px'; knob.style.background='var(--accent)';
+    if (body) body.style.display='block';
+  } else {
+    track.classList.remove('on'); knob.style.left='3px'; knob.style.background='var(--muted)';
+    if (body) body.style.display='none';
+  }
+}
+
+// ── SLIDER ↔ NUMBER SYNC ─────────────────────────────────────────────────────
+function syncSliderToNum(sliderId, numId) {
+  document.getElementById(numId).value = Number(document.getElementById(sliderId).value).toFixed(2);
+}
+function syncNumToSlider(numId, sliderId) {
+  document.getElementById(sliderId).value = document.getElementById(numId).value;
+}
+function syncMaxBuy(v) {
+  document.getElementById('max-buy-num').value = v;
+  document.getElementById('max-buy-val').textContent = v+'¢';
+}
+function syncMaxBuyNum(v) {
+  document.getElementById('max-buy-slider').value = v;
+  document.getElementById('max-buy-val').textContent = v+'¢';
+}
+
+// ── BOT CONTROLS ──────────────────────────────────────────────────────────────
+async function startBot() {
+  const cfg = gatherSettings();
+  cfg.coin = activeCoin;
+  try {
+    await fetch('/api/bot/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg) });
+  } catch(e) {}
+}
+async function stopBot() {
+  try {
+    await fetch('/api/bot/stop', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({coin:activeCoin}) });
+  } catch(e) {}
+}
+async function abortPosition() {
+  if (!confirm('Abort open position for '+activeCoin+'?')) return;
+  try {
+    await fetch('/api/abort', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({coin:activeCoin}) });
+  } catch(e) {}
+}
+
+// ── PERIOD ────────────────────────────────────────────────────────────────────
+async function setPeriod(p, btn) {
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  try {
+    await fetch('/api/set_period', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({coin:activeCoin,period:p}) });
+    loadTrades(); loadKalshiStats();
+  } catch(e) {}
+}
+
+// ── HARD LOCK ─────────────────────────────────────────────────────────────────
+function setLockState(locked) {
+  const track = document.getElementById('lock-track');
+  const knob  = document.getElementById('lock-knob');
+  if (!track) return;
+  if (locked) {
+    track.style.background = 'var(--orange)';
+    knob.style.transform   = 'translateX(18px)';
+  } else {
+    track.style.background = '';
+    knob.style.transform   = 'translateX(2px)';
+  }
+}
+function toggleLock(wrap) {
+  const coin   = activeCoin;
+  const locked = !lockedCoins[coin];
+  lockedCoins[coin] = locked;
+  setLockState(locked);
+}
+
+// ── BALANCE CHART ─────────────────────────────────────────────────────────────
+const COIN_COLORS = {
+  BTC:'#f7931a'
+};
+
+async function fetchBalanceHistory() {
+  try {
+    const r = await fetch('/api/balance_history?period='+balancePeriod);
+    balanceChartData = await r.json();
+    buildCoinToggles();
+    drawBalanceChart();
+  } catch(e) {}
+}
+
+function buildCoinToggles() {
+  const wrap = document.getElementById('bal-coin-toggles');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  COINS.forEach(coin => {
+    const btn = document.createElement('button');
+    btn.className = 'period-btn' + (balanceCoinShow[coin] ? ' active' : '');
+    btn.style.borderColor = COIN_COLORS[coin];
+    btn.style.color = balanceCoinShow[coin] ? '#000' : COIN_COLORS[coin];
+    btn.style.background = balanceCoinShow[coin] ? COIN_COLORS[coin] : 'transparent';
+    btn.textContent = coin;
+    btn.onclick = () => {
+      balanceCoinShow[coin] = !balanceCoinShow[coin];
+      buildCoinToggles();
+      drawBalanceChart();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+function setBalanceChartType(t) {
+  balanceChartType = t;
+  document.getElementById('chart-type-bar').classList.toggle('active', t==='bar');
+  document.getElementById('chart-type-line').classList.toggle('active', t==='line');
+  drawBalanceChart();
+}
+
+function toggleLLMSection() {
+  const body = document.getElementById('llm-body');
+  const chev = document.getElementById('llm-chevron');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  chev.textContent = open ? '▾' : '▸';
+}
+
+function setBalancePeriod(p) {
+  balancePeriod = p;
+  document.querySelectorAll('[id^="bal-period-"]').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('bal-period-'+p);
+  if (el) el.classList.add('active');
+  fetchBalanceHistory();
+}
+
+function drawBalanceChart() {
+  const canvas = document.getElementById('home-balance-chart');
+  if (!canvas) return;
+  if (balanceChartType === 'bar') { drawBalanceBarChart(canvas); return; }
+  const W = canvas.offsetWidth || 700, H = 160;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  const pad = { t:16, r:10, b:24, l:44 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+
+  // Gather all visible points to find time + value range
+  let allVals = [], allTs = [];
+  COINS.forEach(coin => {
+    if (!balanceCoinShow[coin]) return;
+    const pts = (balanceChartData[coin] || {}).points || [];
+    pts.forEach(p => { allVals.push(p.v); allTs.push(new Date(p.t).getTime()); });
+  });
+  if (allTs.length === 0) {
+    ctx.fillStyle = 'rgba(74,98,114,.4)';
+    ctx.font = '11px Space Mono,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No settled trades in this period', W/2, H/2);
+    return;
+  }
+
+  const minT = Math.min(...allTs), maxT = Math.max(...allTs);
+  let minV = Math.min(0, ...allVals), maxV = Math.max(0, ...allVals);
+  const vPad = (maxV - minV) * 0.1 || 0.5;
+  minV -= vPad; maxV += vPad;
+  const vRange = maxV - minV, tRange = maxT - minT || 1;
+
+  const tx = t => pad.l + ((t - minT) / tRange) * cW;
+  const ty = v => pad.t + (1 - (v - minV) / vRange) * cH;
+
+  // Zero line
+  const zy = ty(0);
+  ctx.strokeStyle = 'rgba(74,98,114,.3)'; ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, zy); ctx.lineTo(pad.l+cW, zy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Y axis labels
+  ctx.fillStyle = 'rgba(74,98,114,.8)'; ctx.font = '9px Space Mono,monospace'; ctx.textAlign = 'right';
+  [minV, 0, maxV].forEach(v => {
+    const y = ty(v);
+    ctx.fillText((v>=0?'+$':'-$')+Math.abs(v).toFixed(2), pad.l-4, y+3);
+  });
+
+  // Draw each coin line
+  COINS.forEach(coin => {
+    if (!balanceCoinShow[coin]) return;
+    const pts = (balanceChartData[coin] || {}).points || [];
+    if (pts.length === 0) return;
+    const color = COIN_COLORS[coin];
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.shadowColor = color; ctx.shadowBlur = 4;
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      const x = tx(new Date(p.t).getTime()), y = ty(p.v);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Dot at last point
+    const last = pts[pts.length-1];
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(tx(new Date(last.t).getTime()), ty(last.v), 3, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+function drawBalanceBarChart(canvas) {
+  // always use home-balance-chart, ignore passed canvas if stale ref
+  canvas = document.getElementById('home-balance-chart') || canvas;
+  const W = canvas.offsetWidth || 700, H = 160;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Build per-coin totals from last cumulative point
+  const visible = COINS.filter(c => balanceCoinShow[c]);
+  const vals = visible.map(coin => {
+    const pts = (balanceChartData[coin] || {}).points || [];
+    return pts.length ? pts[pts.length-1].v : 0;
+  });
+
+  if (vals.every(v => v === 0)) {
+    ctx.fillStyle = 'rgba(74,98,114,.4)';
+    ctx.font = '11px Space Mono,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No settled trades in this period', W/2, H/2);
+    return;
+  }
+
+  const maxAbs = Math.max(Math.abs(Math.min(...vals)), Math.abs(Math.max(...vals)), 0.01);
+  const pad = { t:16, r:10, b:34, l:50 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const midY = pad.t + cH / 2;
+
+  // Zero line
+  ctx.strokeStyle = 'rgba(74,98,114,.3)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, midY); ctx.lineTo(pad.l + cW, midY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Y labels
+  ctx.fillStyle = 'rgba(74,98,114,.8)'; ctx.font = '10px Space Mono,monospace'; ctx.textAlign = 'right';
+  [maxAbs, 0, -maxAbs].forEach(v => {
+    const y = midY - (v / maxAbs) * (cH / 2);
+    ctx.fillText((v>=0?'+$':'-$')+Math.abs(v).toFixed(2), pad.l-4, y+3);
+  });
+
+  const barW = Math.max(12, Math.floor(cW / visible.length) - 10);
+  const step = cW / visible.length;
+
+  visible.forEach((coin, i) => {
+    const v = vals[i];
+    const color = COIN_COLORS[coin];
+    const barH = Math.abs(v) / maxAbs * (cH / 2);
+    const x = pad.l + i * step + (step - barW) / 2;
+    const y = v >= 0 ? midY - barH : midY;
+    ctx.fillStyle = color + 'bb';
+    ctx.beginPath(); ctx.roundRect(x, y, barW, Math.max(2, barH), 3); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.font = 'bold 12px Space Mono,monospace'; ctx.textAlign = 'center';
+    ctx.fillText(coin, x + barW/2, H - 4);
+    ctx.fillStyle = v >= 0 ? 'rgba(0,255,136,.9)' : 'rgba(255,59,92,.9)';
+    ctx.font = 'bold 11px Space Mono,monospace';
+    const label = (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2);
+    ctx.fillText(label, x + barW/2, v >= 0 ? y - 4 : y + barH + 12);
+  });
+}
+
+// ── LLM CHAT ─────────────────────────────────────────────────────────────────
+const llmHistory = [];
+
+function onLLMProviderChange() {
+  const p         = document.getElementById('llm-provider').value;
+  const keyRow    = document.getElementById('llm-apikey-row');
+  const urlRow    = document.getElementById('llm-url-row');
+  const keyEl     = document.getElementById('llm-apikey');
+  const modelEl   = document.getElementById('llm-model');
+  const modelHint = document.getElementById('llm-model-hint');
+  const ollamaHint= document.getElementById('llm-ollama-hint');
+
+  const isLocal = p === 'ollama' || p === 'hermes';
+  if (keyRow)     keyRow.style.display    = isLocal ? 'none' : 'flex';
+  if (urlRow)     urlRow.style.display    = isLocal ? 'flex' : 'none';
+  if (ollamaHint) ollamaHint.style.display= isLocal ? 'block' : 'none';
+
+  const urlEl = document.getElementById('llm-url');
+  const hints = {
+    hermes:    { ph: 'hermes-3-llama-3.1-8b',  hint: 'hermes-3-llama-3.1-70b · nous-hermes-2', url: 'http://localhost:11434' },
+    ollama:    { ph: 'llama3',                  hint: '',                                        url: 'http://localhost:11434' },
+    anthropic: { ph: 'claude-sonnet-4-6',       hint: 'claude-haiku-4-5 · claude-opus-4-6',     url: '' },
+    openai:    { ph: 'gpt-4o',                  hint: 'gpt-4o-mini · gpt-4-turbo',              url: '' },
+    grok:      { ph: 'grok-3',                  hint: 'grok-3-mini · grok-2',                   url: '' },
+  };
+  const h = hints[p] || hints.ollama;
+  if (modelEl   && !modelEl.value) modelEl.placeholder = h.ph;
+  if (modelHint) modelHint.textContent = h.hint;
+  if (urlEl && !urlEl.value && h.url) urlEl.value = h.url;
+
+  if (keyEl) {
+    const kph = { anthropic:'sk-ant-…', openai:'sk-…', grok:'xai-…' };
+    keyEl.placeholder = kph[p] || '';
+  }
+}
+
+function llmAddMessage(role, text) {
+  const box = document.getElementById('llm-messages');
+  const el  = document.createElement('div');
+  el.style.cssText = `margin-bottom:6px;padding:4px 0;border-bottom:1px solid var(--border)`;
+  const label = role === 'user' ? '<span style="color:var(--accent2)">YOU</span>' : '<span style="color:var(--accent)">AI</span>';
+  el.innerHTML = label + ' <span style="color:var(--muted)">›</span> ' + text.replace(/\n/g,'<br>');
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function buildLLMContext() {
+  const perms = {
+    history:       document.getElementById('llm-perm-history').checked,
+    signals:       document.getElementById('llm-perm-signals').checked,
+    settings_read: document.getElementById('llm-perm-settings_read').checked,
+    settings_write:document.getElementById('llm-perm-settings_write').checked,
+    websearch:     document.getElementById('llm-perm-websearch').checked,
+  };
+  let ctx = `You are an AI assistant embedded in the ꓘALSHIKILLER dashboard, a multi-coin automated trading bot for Kalshi prediction markets.
+Keep responses concise and practical. Use plain text only — no markdown headers, no bullet lists with dashes, no bold formatting.
+You cannot execute real trades or move money. Today: ${new Date().toLocaleString()}.
+
+HOW THE BOT WORKS:
+Kalshi runs 15-minute YES/NO markets on whether a crypto price will be above or below a strike price at expiry.
+The bot trades 7 coins: ${COINS.join(', ')}. Each coin runs its own bot process (bot.py) with its own config file.
+Each market cycle (~15 min), the bot reads price feeds, computes signals, and decides whether to place a YES or NO contract.
+Contracts cost the ask price in cents (e.g. 72¢) and pay $1.00 if correct, so profit = 1.00 - ask, loss = ask.
+
+BOT STATUSES (bot_status field):
+- idle: bot is running but no market is open or active yet
+- building: collecting price data, computing signals for the current market
+- watching: conviction threshold not yet met, still monitoring
+- traded: a position was placed this market cycle, waiting for expiry
+- killed: bot was stopped (daily loss limit, hard stop, or manual)
+- (not running): bot process is not started at all
+
+SIGNAL STRUCTURE (what you see under "signals" permission):
+Each coin state includes a signals object with these key fields:
+- safety_score (0-1): market safety check — low score means unfavorable conditions (weight 20%)
+- sig_score (0-1): directional signal agreement from multiple indicators (weight 45%)
+- t_score (0-1): timing score, how close to the ideal entry window (weight 25%)
+- price_conf (0-1): price confidence / volatility filter (weight 10%)
+- conviction: final weighted score = safety*0.20 + sig*0.45 + t*0.25 + price_conf*0.10
+- direction: "yes" or "no" — which side the signals favor
+- yes_ask / no_ask: current market prices in cents (e.g. 0.72 = 72¢)
+- secs_remaining: seconds left in the current 15-min market window
+
+KEY CONFIG SETTINGS (what you see under "settings" permission):
+- mode: "balanced" (default) / "selective" (higher bar) / "aggressive" (lower bar) / "always" (fires every market)
+- wager_mode: "dollar" (fixed $) or "pct" (percent of balance)
+- wager_pct: percent of balance to wager per trade (e.g. 2 = 2%)
+- wager_pct_min: minimum dollar floor when using pct mode
+- kelly_enabled / kelly_fraction: Kelly criterion sizing (fraction = 0.25 means quarter-Kelly)
+- wallet_floor: bot stops itself if balance drops below this ($)
+- daily_loss_limit: max daily loss before bot kills itself ($)
+- hourly_loss_limit / hourly_loss_enabled: per-hour loss cap
+- trigger_time: minutes before expiry to allow a trade
+- trigger_method: "ev" (expected value) or "conviction"
+- min_ev_edge: minimum EV edge required to fire
+- signal_agreement: number of signals that must agree before firing
+- allow_early_buy / early_max_price: allow entry earlier if price is favorable
+- cooldown_markets: markets to skip after a loss before trading again
+- consec_loss_trigger: consecutive losses before pausing
+- inverse_bet_enabled: flips direction at last second (buys opposite of signal)
+- exit_at_cents / close_window / time_exit_enabled: position exit rules
+- penny_enabled / penny_stop_mins / penny_wager: special low-price strategy
+
+LIVE DATA AVAILABLE TO YOU:
+The server appends current balance, which bots are running, and per-coin P&L/status to every message.
+${perms.settings_read ? 'You also have the full current config for the active coin (' + activeCoin + ').' : ''}
+${perms.signals ? 'You also have live signals, prices, and status for the active coin.' : ''}
+${perms.history ? 'You also have trade analytics (win rate, P&L by coin, recent trades).' : ''}
+${perms.settings_write ? 'You CAN suggest setting changes. To apply them, include a JSON block like {"save_settings":true,"kelly_fraction":0.3} in your reply and the dashboard will apply it.' : 'You do not have permission to change settings this session.'}
+
+Focus on being useful: spot issues, explain signals, flag unusual patterns, suggest config tuning based on actual performance data.`;
+
+
+  if (perms.settings_read) {
+    try {
+      const r = await fetch('/api/settings?coin='+activeCoin);
+      const cfg = await r.json();
+      ctx += `\nCurrent ${activeCoin} settings: ${JSON.stringify(cfg, null, 2)}`;
+    } catch(e) {}
+  }
+  if (perms.history) {
+    try {
+      const r = await fetch('/api/analytics');
+      const a = await r.json();
+      // Trim to avoid blowing up local model context
+      const summary = {
+        total_trades: a.total_trades, total_pnl: a.total_pnl,
+        win_rate: a.win_rate, avg_pnl: a.avg_pnl,
+        by_coin: a.by_coin,
+      };
+      ctx += `\nTrade analytics: ${JSON.stringify(summary)}`;
+    } catch(e) {}
+  }
+  if (perms.signals) {
+    try {
+      const r = await fetch('/api/state?coin='+activeCoin);
+      const s = await r.json();
+      ctx += `\n${activeCoin} signals: ${JSON.stringify(s.signals||{}, null, 2)}`;
+      ctx += `\n${activeCoin} status: ${s.bot_status}, direction: ${s.bot_direction||'none'}`;
+      ctx += `\nYES ask: ${s.yes_ask}¢  NO ask: ${s.no_ask}¢  mins left: ${s.secs_remaining ? (s.secs_remaining/60).toFixed(1) : '—'}`;
+    } catch(e) {}
+  }
+  return { ctx, perms };
+}
+
+async function sendLLMMessage() {
+  const input = document.getElementById('llm-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  llmAddMessage('user', msg);
+  llmHistory.push({ role:'user', content: msg });
+
+  const { ctx, perms } = await buildLLMContext();
+
+  // Show animated thinking indicator
+  const box = document.getElementById('llm-messages');
+  const dot = document.createElement('div');
+  dot.id = 'llm-typing';
+  dot.style.cssText = 'color:var(--muted);font-size:11px;padding:4px 0;font-style:italic';
+  dot.textContent = 'starting up...';
+  box.appendChild(dot);
+  box.scrollTop = box.scrollHeight;
+  const _thinkTimer = setTimeout(() => {
+    const el = document.getElementById('llm-typing');
+    if (el) el.textContent = 'typing...';
+  }, 1800);
+
+  try {
+    const r = await fetch('/api/llm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: ctx, messages: llmHistory }),
+    });
+    const d = await r.json();
+    const reply = d.reply || '⚠ No response';
+
+    // Remove typing indicator + stop cycling
+    clearTimeout(_thinkTimer);
+    document.getElementById('llm-typing')?.remove();
+
+    // Settings write-back if AI includes a JSON patch with save_settings flag
+    let finalReply = reply;
+    if (perms.settings_write && reply.includes('"save_settings"')) {
+      try {
+        const m = reply.match(/\{[\s\S]*?"save_settings"[\s\S]*?\}/);
+        if (m) {
+          const patch = JSON.parse(m[0]);
+          delete patch.save_settings;
+          await fetch('/api/settings?coin='+activeCoin, {
+            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(patch)
+          });
+          finalReply += '\n✅ Settings updated for ' + activeCoin;
+        }
+      } catch(e) {}
+    }
+
+    llmHistory.push({ role:'assistant', content: reply });
+    llmAddMessage('assistant', finalReply);
+  } catch(e) {
+    clearTimeout(_thinkTimer);
+    document.getElementById('llm-typing')?.remove();
+    llmAddMessage('assistant', '⚠ Error: ' + e.message);
+  }
+}
+
+// ── CLAUDE INTEGRATION ───────────────────────────────────────────────────────
+let _claudeSetupVisible = false;
+
+async function claudeCheckStatus() {
+  const dot      = document.getElementById('claude-status-dot');
+  const dot2     = document.getElementById('claude-status-dot2');
+  const label    = document.getElementById('claude-status-label');
+  const toggleBtn = document.getElementById('claude-toggle-setup-btn');
+  const checkBtn = document.getElementById('claude-check-btn');
+  const resultEl = document.getElementById('claude-check-result');
+  const setDot2  = (clr, glow) => { if (dot2) { dot2.style.background = clr; dot2.style.boxShadow = glow ? `0 0 6px ${clr}` : 'none'; } };
+
+  // Loading state
+  if (checkBtn) { checkBtn.textContent = 'CHECKING…'; checkBtn.disabled = true; }
+  if (resultEl) resultEl.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/claude/status');
+    const d = await r.json();
+
+    if (d.ready) {
+      // ── Connected ──────────────────────────────────────────────────────────
+      dot.style.background  = 'var(--accent)';
+      dot.style.boxShadow   = '0 0 6px var(--accent)';
+      setDot2('var(--accent)', true);
+      label.textContent     = `MCP connected · ${d.running_count || 0} bots running`;
+      label.style.color     = 'var(--accent)';
+      toggleBtn.style.display = 'inline-flex';
+      toggleBtn.textContent = _claudeSetupVisible ? 'HIDE' : 'SETUP';
+
+      const s1 = document.getElementById('step1-check');
+      const s2 = document.getElementById('step2-check');
+      if (s1) s1.textContent = '✓'; if (s2) s2.textContent = '✓';
+
+      if (!_claudeSetupVisible) {
+        document.getElementById('claude-setup-panel').style.display    = 'none';
+        document.getElementById('claude-connected-panel').style.display = 'flex';
+        claudeRenderSignalGrid(d.coins || []);
+        claudeRenderStats(d);
+      }
+    } else {
+      // ── Not connected ──────────────────────────────────────────────────────
+      dot.style.background  = '#cf7f42';
+      dot.style.boxShadow   = 'none';
+      setDot2('#cf7f42', false);
+      label.style.color     = '#cf7f42';
+      // Don't auto-expand setup panel — Cowork is already live, Desktop is optional
+      // Just show a status note inside the Desktop box; user can click SETUP to expand
+      document.getElementById('claude-setup-panel').style.display    = 'none';
+      document.getElementById('claude-connected-panel').style.display = 'none';
+      toggleBtn.style.display = 'inline-block';
+
+      const s1 = document.getElementById('step1-check');
+      const s2 = document.getElementById('step2-check');
+
+      // Show specific guidance (only visible if user clicks SETUP to expand steps)
+      if (!d.mcp_exists) {
+        label.textContent = 'tools: not installed';
+        setDot2('var(--muted)', false);
+        _showCheckResult('warning', 'Run the Terminal command above to install the bot tools.');
+      } else if (!d.mcp_registered) {
+        label.textContent = 'tools: installed ✓';
+        setDot2('#cf7f42', false);
+        _showCheckResult('success', '✓ Installed! Bot tools will be available in your next Claude chat.');
+      } else {
+        label.textContent = 'tools: ready';
+        setDot2('var(--accent)', true);
+        _showCheckResult('success', '✓ Bot tools are active. Start a new Claude chat to use them.');
+      }
+    }
+  } catch(e) {
+    dot.style.background = 'var(--muted)';
+    label.textContent    = 'dashboard offline';
+    label.style.color    = 'var(--muted)';
+    _showCheckResult('error', '⚠ Could not reach dashboard — is it running?');
+  } finally {
+    if (checkBtn) { checkBtn.textContent = 'CHECK'; checkBtn.disabled = false; }
+  }
+}
+
+function _showCheckResult(type, msg) {
+  const el = document.getElementById('claude-check-result');
+  if (!el) return;
+  const colors = {
+    warning: { bg: 'rgba(207,127,66,.1)',  border: 'rgba(207,127,66,.3)',  text: '#cf7f42' },
+    error:   { bg: 'rgba(255,59,92,.1)',   border: 'rgba(255,59,92,.3)',   text: '#ff3b5c' },
+    success: { bg: 'rgba(0,255,136,.08)', border: 'rgba(0,255,136,.25)', text: '#00ff88' },
+  };
+  const c = colors[type] || colors.warning;
+  el.style.display         = 'block';
+  el.style.background      = c.bg;
+  el.style.border          = '1px solid ' + c.border;
+  el.style.color           = c.text;
+  el.style.fontSize        = '10px';
+  el.style.borderRadius    = '6px';
+  el.style.padding         = '7px 10px';
+  el.style.lineHeight      = '1.5';
+  el.textContent = msg;
+}
+
+function claudeToggleSetup() {
+  _claudeSetupVisible = !_claudeSetupVisible;
+  const setupEl = document.getElementById('claude-setup-panel');
+  const connEl  = document.getElementById('claude-connected-panel');
+  const btn     = document.getElementById('claude-toggle-setup-btn');
+  if (_claudeSetupVisible) {
+    setupEl.style.display = 'flex';
+    connEl.style.display  = 'none';
+    btn.textContent       = 'HIDE';
+  } else {
+    setupEl.style.display = 'none';
+    connEl.style.display  = 'flex';
+    btn.textContent       = 'SETUP';
+  }
+}
+
+function claudeRenderSignalGrid(coins) {
+  const grid = document.getElementById('claude-signal-grid');
+  if (!grid) return;
+  grid.innerHTML = coins.map(c => {
+    const bull  = c.bull || 0;
+    const bear  = c.bear || 0;
+    const total = bull + bear;
+    const conv  = c.conviction;
+    const pct   = conv != null ? Math.round(conv * 100) : null;
+    // Color: green if majority bull, red if majority bear, muted if no data
+    const col = total === 0 ? 'var(--muted)'
+              : bull > bear  ? 'var(--accent)'
+              : 'var(--red)';
+    const running = c.running
+      ? `<div style="width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 auto 1px;box-shadow:0 0 4px var(--accent)"></div>`
+      : `<div style="width:4px;height:4px;border-radius:50%;background:transparent;margin:0 auto 1px"></div>`;
+    return `<div style="text-align:center;padding:4px 2px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer"
+                 onclick="switchTab('${c.coin}')" title="${c.coin}: ${bull}🟢 ${bear}🔴">
+      ${running}
+      <div style="font-family:'Syne',sans-serif;font-size:8px;font-weight:700;color:${col};letter-spacing:.04em">${c.coin}</div>
+      <div style="font-size:9px;font-family:'Space Mono',monospace;color:${col}">${pct != null ? pct+'%' : '--'}</div>
+    </div>`;
+  }).join('');
+}
+
+function claudeRenderStats(d) {
+  const balEl = document.getElementById('claude-bal-str');
+  const pnlEl = document.getElementById('claude-pnl-str');
+  if (balEl) balEl.textContent = d.balance != null ? `Balance $${d.balance.toFixed(2)}` : '';
+  if (pnlEl) {
+    const pnl = d.pnl_today || 0;
+    pnlEl.textContent  = `Today ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+    pnlEl.style.color  = pnl >= 0 ? 'var(--accent)' : 'var(--red)';
+  }
+}
+
+function claudeCopyCmd() {
+  const cmd = 'cd ~/Desktop/kalshi-bot-clean && ./install_claude_mcp.sh';
+  navigator.clipboard.writeText(cmd).then(() => {
+    const el = document.getElementById('claude-copy-ok');
+    if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2500); }
+  });
+}
+
+async function claudeLaunch(type) {
+  const btn   = document.getElementById('claude-launch-btn');
+  const toast = document.getElementById('claude-launch-toast');
+  if (btn) { btn.textContent = 'opening…'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/claude/open', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ type }),
+    });
+    const d = await r.json();
+    // Copy prompt to clipboard
+    await navigator.clipboard.writeText(d.prompt);
+    // Show toast
+    if (toast) {
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 6000);
+    }
+  } catch(e) {
+    alert('Could not build prompt: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '✦ ASK CLAUDE'; btn.disabled = false; }
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Restore chart type button state from localStorage
+  document.getElementById('chart-type-bar').classList.toggle('active', balanceChartType==='bar');
+  document.getElementById('chart-type-line').classList.toggle('active', balanceChartType==='line');
+  startHomePolling();
+  loadGlobalSettings();
+  loadSystemSettings();
+  claudeCheckStatus();
+  setInterval(claudeCheckStatus, 30000); // re-check every 30s
+  setInterval(() => {
+    if (activeTab==='home') document.getElementById('home-clock').textContent=new Date().toLocaleTimeString();
+  }, 1000);
+  // refresh Kalshi chart every 60s when in market mode
+  setInterval(() => { if (chartMode==='market') loadKalshiChart(); }, 60000);
+});
+</script>
+</body>
+</html>
