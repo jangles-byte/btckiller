@@ -1318,6 +1318,8 @@ async function pollBotTerminal() {
     // Re-render whenever the most recent line changes (works even when buffer is full)
     if (lastLine !== termLastLine) {
       termLastLine = lastLine;
+      // Remember if user is near the bottom before re-rendering
+      const isNearBottom = term.scrollHeight - term.scrollTop - term.clientHeight < 60;
       // Colorize key patterns
       const html = lines.map(l => {
         let cls = '';
@@ -1329,8 +1331,14 @@ async function pollBotTerminal() {
         else cls = 'color:#aaa';
         return `<span style="${cls}">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>`;
       }).join('\n');
+      const prevScroll = term.scrollTop;
       term.innerHTML = html || '<span style="color:#444">— bot not running —</span>';
-      term.scrollTop = term.scrollHeight;
+      // Only snap to bottom if user was already there; otherwise restore their position
+      if (isNearBottom) {
+        term.scrollTop = term.scrollHeight;
+      } else {
+        term.scrollTop = prevScroll;
+      }
     }
     statusEl.textContent = data.running ? '● live' : '○ stopped';
     statusEl.style.color = data.running ? 'var(--accent)' : 'var(--muted)';
@@ -1647,6 +1655,10 @@ let settingsLoaded = false;
 function applySettingsToUI(s) {
   if (!s || settingsLoaded) return;
   settingsLoaded = true;
+  // Apply trade mode first so the right panel is visible
+  if (s.mode) setTopMode(s.mode);
+  // Apply loss period
+  if (s.loss_period) setLossPeriod(s.loss_period);
   // Set input values FIRST so setWagerMode picks them up for the labels
   if (s.max_session_wager !== undefined) {
     const el = document.getElementById('maxwager-input');
@@ -1917,10 +1929,7 @@ async function fetchState() {
 
     if (data.signals?.length) renderSignals(data.signals);
 
-    // ── P&L from Kalshi (primary source) ──────────
-    // Uses settlements API — format: +/- percentage
-    const kalshiPnl = data.kalshi_pnl_dollars;
-    const kalshiPct = data.kalshi_pnl_pct;
+    // ── P&L from trade history (primary source) ──────────
     const kalshiWr  = data.kalshi_win_rate;
     const kalshiW   = data.kalshi_wins   || 0;
     const kalshiL   = data.kalshi_losses || 0;
@@ -1928,24 +1937,10 @@ async function fetchState() {
     const pnlEl = document.getElementById('stat-pnl');
     const pnlSubEl = document.getElementById('stat-pnl-sub');
 
-    if (kalshiPnl !== null && kalshiPnl !== undefined) {
-      // Show percentage format (like Kalshi does) + dollar amount
-      if (kalshiPct !== null && kalshiPct !== undefined) {
-        const pctSign = kalshiPct >= 0 ? '+' : '';
-        pnlEl.textContent = `${pctSign}${kalshiPct.toFixed(1)}%`;
-        pnlSubEl.textContent = `${kalshiPnl>=0?'+':''}$${Math.abs(kalshiPnl).toFixed(2)} · Kalshi`;
-      } else {
-        pnlEl.textContent = `${kalshiPnl>=0?'+':''}$${Math.abs(kalshiPnl).toFixed(2)}`;
-        pnlSubEl.textContent = 'from Kalshi';
-      }
-      pnlEl.className = 'stat-value '+(kalshiPnl>0?'green': kalshiPnl<0?'red':'');
-    } else {
-      // Fallback to local
-      const pnl = data.pnl_today || 0;
-      pnlEl.textContent = (pnl>=0?'+':'')+'$'+Math.abs(pnl).toFixed(2);
-      pnlEl.className   = 'stat-value '+(pnl>0?'green': pnl<0?'red':'');
-      pnlSubEl.textContent = 'local estimate';
-    }
+    const pnl = data.pnl_today || 0;
+    pnlEl.textContent = (pnl>=0?'+':'')+'$'+Math.abs(pnl).toFixed(2);
+    pnlEl.className   = 'stat-value '+(pnl>0?'green': pnl<0?'red':'');
+    pnlSubEl.textContent = 'from trade history';
 
     // Win rate from Kalshi
     const wrEl = document.getElementById('stat-winrate');

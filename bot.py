@@ -1003,31 +1003,25 @@ def run_bot():
             if confirmed:
                 print(f"  ✅ CONFIRMED: {actual_contracts} contracts, cost ${fill_cost:.2f}")
             else:
-                # Wait 3 more seconds and try again
-                print(f"  ⏳ Position not found — waiting 3s and rechecking...")
-                time.sleep(3)
+                # Wait and recheck — do NOT place a second order while first may still be processing
+                print(f"  ⏳ Position not found — waiting 4s and rechecking...")
+                time.sleep(4)
                 confirmed, actual_contracts, fill_cost = _check_position()
                 if confirmed:
                     print(f"  ✅ CONFIRMED (retry): {actual_contracts} contracts, cost ${fill_cost:.2f}")
                 else:
-                    # Order genuinely didn't fill — retry if there's time
-                    if mins_rem > 1.0:
-                        print(f"  🔄 RETRY: order did not fill, placing again at market...")
-                        result2 = place_order(ticker, direction, ask, contracts)
-                        if "error" not in result2:
-                            time.sleep(3)
-                            confirmed, actual_contracts, fill_cost = _check_position()
-                            if confirmed:
-                                print(f"  ✅ CONFIRMED after retry: {actual_contracts} contracts")
-                            else:
-                                print(f"  ⚠️  Could not confirm fill after retry — will skip log")
-                        else:
-                            print(f"  ❌ Retry order error: {result2.get('error','unknown')}")
+                    # One final check after another 4s
+                    print(f"  ⏳ Still not found — final check in 4s...")
+                    time.sleep(4)
+                    confirmed, actual_contracts, fill_cost = _check_position()
+                    if confirmed:
+                        print(f"  ✅ CONFIRMED (final check): {actual_contracts} contracts")
                     else:
-                        print(f"  ⚠️  Order unconfirmed and <1min left — skipping log")
+                        print(f"  ⚠️  Order unconfirmed after 10s — treating as unfilled")
 
             if not confirmed:
-                print(f"  ⚠️  Trade not confirmed — not logging (no OPEN phantom entry)")
+                print(f"  ⚠️  Trade not confirmed — resetting so bot can retry if time allows")
+                market_state["traded"] = False
                 time.sleep(2)
                 continue
 
